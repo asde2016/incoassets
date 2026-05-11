@@ -131,6 +131,22 @@ Output JSON only: {"tokens": ["word1", "word2", ...]}`;
   return [keyword.toLowerCase().trim()].filter(Boolean);
 }
 
+// Take an outline-only iconify body and prepend a filled-currentColor duplicate
+// of every <path> so the result reads as a duotone surface + outline overlay.
+// The original body comes after the filled layer; rendering order means the
+// outline strokes draw ON TOP of the fill, producing the Flaticon Blue look.
+// LLMs no longer need to identify the "outermost" path themselves — the body
+// is duotone-ready as shipped.
+export function duotonizeBody(body: string): string {
+  const pathRe = /<path\b[^>]*?\sd="([^"]+)"[^>]*?\/?>/g;
+  const filledLayer: string[] = [];
+  for (const m of body.matchAll(pathRe)) {
+    filledLayer.push(`<path d="${m[1]}" fill="currentColor"/>`);
+  }
+  if (filledLayer.length === 0) return body;
+  return `${filledLayer.join('')}${body}`;
+}
+
 // Pull up to ~maxTotal references that maximise *visual* diversity:
 // - dedupe by icon NAME (not just `set:name`) so e.g. tabler:database and
 //   lucide:database don't both consume a slot
@@ -152,10 +168,15 @@ function collectReferences(tokens: string[], maxTotal = 5): Reference[] {
         // already-picked name (e.g. same icon in another set) — skip
       } else {
         const bodyMatch = h.svg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
-        const body = bodyMatch?.[1] ?? '';
-        if (body) {
+        const rawBody = bodyMatch?.[1] ?? '';
+        if (rawBody) {
           seenName.add(h.name);
-          return { id: `${h.set}:${h.name}`, set: h.set, name: h.name, body };
+          return {
+            id: `${h.set}:${h.name}`,
+            set: h.set,
+            name: h.name,
+            body: duotonizeBody(rawBody),
+          };
         }
       }
     }
@@ -180,12 +201,32 @@ function renderReferenceBlock(refs: Reference[]): string {
     return '(no library references — synthesize from scratch using the style guide alone)';
   }
   const header =
-    'These references show LINE ANATOMY only (viewBox 0..24).\n' +
-    'You MUST reproduce the STRUCTURE but at 512 scale (×21.3) and WITH duotone fills added.\n' +
-    'stroke-width=6 at 512 reads as a bold ~16px stroke — match that visual weight.\n' +
-    'Do NOT keep your output outline-only just because the references are outline-only.\n';
+    `These ${refs.length} icons (each in viewBox 0..24) are your BUILDING BLOCKS. Compose your output by placing 1 OR 2 of them on the 512 canvas. Pick whichever fits the keyword best:\n\n` +
+    '  - SINGLE-OBJECT keyword (e.g. database, lock, file, gear, calendar): place 1 reference, large.\n' +
+    '  - SCENE keyword (e.g. cloud computing, data pipeline, payment flow): place 2 references that depict the relationship.\n' +
+    '  - PERSONA keyword (e.g. 연구원, 개발자, scientist): place a person/user reference + a role-specific tool reference (flask, laptop, etc.).\n\n' +
+    '## HOW TO PLACE A REFERENCE\n' +
+    'Each [REF_i] body below is ALREADY DUOTONE-READY — it contains a filled <path …fill="currentColor"/> layer followed by the outline layer. You do NOT need to add fills or analyse paths yourself.\n' +
+    'To place a reference on the 512 canvas, simply paste its body verbatim inside a transform group with vector-effect="non-scaling-stroke":\n' +
+    '```\n' +
+    '<g transform="translate(X Y) scale(S)" vector-effect="non-scaling-stroke">\n' +
+    '  {paste the entire REF body here, exactly as shown — do not modify it}\n' +
+    '</g>\n' +
+    '```\n' +
+    'The vector-effect attribute is CRITICAL. Without it the transform scale (13~17×) would blow the outline stroke up to ~80-100px and the outline would swallow the entire fill, producing a solid blob with no anatomy visible.\n' +
+    'The REF bodies are pre-built so the fill layer renders FIRST and the outline strokes draw ON TOP — that\'s the Flaticon Blue duotone look. Just paste verbatim, do not edit the body.\n\n' +
+    '## PLACEMENT NUMBERS (use these unless the references need different framing)\n' +
+    'SINGLE: <g transform="translate(56 56) scale(17)" vector-effect="non-scaling-stroke">…</g>\n' +
+    '   → fills roughly x=56..464, y=56..464 (canvas almost full)\n' +
+    'PRIMARY (when composing 2): <g transform="translate(40 80) scale(13)" vector-effect="non-scaling-stroke">…</g>\n' +
+    '   → fills roughly x=40..352, y=80..392 (left ~61%)\n' +
+    'SECONDARY (when composing 2): <g transform="translate(330 80) scale(7)" vector-effect="non-scaling-stroke">…</g>\n' +
+    '   → fills roughly x=330..498, y=80..248 (top-right ~33%)\n' +
+    'CONNECTOR (when composing 2): 1 or 2 thin lines tying the two blocks (e.g. primary top-right corner to secondary bottom-left corner). These use the root stroke-width=6 directly (no vector-effect needed).\n' +
+    'STATUS MARKER (optional, both modes): one small filled circle or check-mark badge in an empty corner to add the duotone accent.\n\n' +
+    '## REFERENCES (pick the ones that best fit the keyword — you don\'t have to use all of them)\n';
   const body = refs
-    .map((r, i) => `[REF_${i + 1}] ${r.id} (viewBox 0 0 24 24)\n${r.body}`)
+    .map((r, i) => `[REF_${i + 1}] ${r.id}\n${r.body}`)
     .join('\n\n');
   return `${header}\n${body}`;
 }
@@ -224,56 +265,21 @@ CONCEPT VOCABULARY: ${tokens.join(', ') || '(none)'}
   - For network/scene: at least one element touches y≈40~80, and at least one touches y≈420~472.
 - 14~24 primitive shapes per icon. Integer coordinates, multiples of 4 preferred. Rounded corners (rx 4~24) on most rects.
 
-# Variation strategy — pick what fits the keyword
-First, classify the KEYWORD by its semantic shape:
+# Variation strategy
+The references above are your building blocks — pick 1 OR 2 per item and follow the placement numbers in the reference block. Then add 1~2 connector lines and an optional status marker.
 
-A) **Atomic concept** (a single thing) — examples: database, lock, file, gear, key, document, cart, calendar, bell, chart.
-   → Generate ${count} variations of the SAME single-centered subject. Vary internal anatomy, density, and accent details. Do NOT introduce unrelated dashboard chrome, networks, or paired devices.
-   → Suggested per-variant differentiation:
-     • variant 1 — standard: clean canonical rendering, bold central object with essential anatomy (12~16 shapes).
-     • variant 2 — with-detail: same object but with extra inner content (cells, indicators, labels, markers).
-     • variant 3 — composed: same object paired with ONE small accent (status dot, badge, arrow, secondary marker).
-   Beyond 3, add stylistic variants (slight rotation, alternative anatomy emphasis), still single-centered.
-
-B) **Scene / workflow concept** — examples: dashboard, analytics, payment flow, file upload, code review.
-   → Use ${count} DIFFERENT scene patterns from this menu:
-     • window-scene (browser/dashboard chrome with traffic dots + URL bar + sidebar + content cards)
-     • device-stack (two outlined devices side-by-side, each with one filled inner panel)
-     • network (3-bump cloud + 1~2 devices + connector lines, some dashed)
-     • container-inside (one large outline holding inner cluster)
-
-C) **Paired / relational concept** — examples: sync, exchange, send-receive, compare.
-   → Use device-stack / network / container-inside patterns; avoid window-scene.
-
-D) **Persona / role concept** — examples: scientist, researcher, doctor, engineer,
-   teacher, designer, analyst, 연구원, 개발자, 학생, 의사, 디자이너.
-   → Primary subject MUST be a person occupying y=64..448 vertically.
-   → Person anatomy (8 required parts):
-       • Head circle (cx≈256, cy≈128, r≈48)
-       • Hair / cap shape on top of head (path or filled polygon) — FILLED
-       • 2 eye dots (small fill circles cx-256±16, cy≈128)
-       • Glasses (2 small rects + bridge line) OR role-specific cap line
-       • Neck line / shoulder span at y≈196 (width ≥ 160)
-       • Body / coat outline (rect or trapezoid, y=200..420, width ≥ 240)
-       • Coat collar V (path inside body, FILLED with currentColor)
-       • Internal coat detail (2~3 button circles + chest pocket rect + side seam line)
-   → Role-specific tool (≥ 1 required, occupying remaining canvas):
-       researcher / scientist / 연구원 → flask OR microscope (right of person, x≈360..448)
-       developer  / 개발자             → laptop OR terminal (paired left/right)
-       doctor     / 의사                → stethoscope OR clipboard
-       engineer   / 엔지니어           → gear OR wrench OR hard-hat marker
-       teacher    / 교사                → book OR chalkboard
-   → Shape budget: person ≥ 8 + tool ≥ 6 + base/connector ≥ 2 = 16~24 shapes.
-   → IMPORTANT: when KEYWORD classifies as D, use ONLY the persona angle enum below.
-     Do not mix in atomic/scene angles like "with-action", "composed", "scene".
-
-For the KEYWORD "${keyword}", first decide A / B / C / D, then generate the ${count} variants accordingly.
-The item.angle enum depends on the category:
-  A (atomic)  → "standard", "with-detail", "composed"
-  B (scene)   → "window-scene", "device-stack", "network", "container-inside"
-  C (paired)  → "device-stack", "network", "container-inside"
-  D (persona) → "standard", "with-tool", "with-detail", "minimal", "in-context", "abstract"
+For the ${count} variants, use a DIFFERENT angle each:
+  - "standard"     — canonical placement: 1 reference centered & large (SINGLE) OR primary left + secondary top-right (DUAL)
+  - "with-detail"  — same placement, with extra inner accent (data markers, small filled rects, indicator dots) layered on top
+  - "composed"     — adds a small status badge or check-mark (e.g. cylinder + check, lock + ring, person + ID badge)
+  - "with-action"  — adds a directional arrow or motion line (e.g. upload arrow on a cloud, sync curve between devices)
+  - "minimal"      — single reference, single duotone surface, no extras beyond one tiny marker
+  - "scene"        — two references with a clear connector tying them (e.g. cloud → laptop, database → arrow → check)
+  - "in-context"   — adds a thin baseline/desk/ground line under the subject for environmental context
+  - "abstract"     — drops the outline-only refinement, keeps only the filled silhouette + 1-2 accent lines
 Each item.angle must be unique within the response.
+
+For PERSONA keywords (연구원/개발자/scientist/etc.) the person reference is the primary; the role-specific tool (flask/laptop/stethoscope from the references) is the secondary. Don't invent person anatomy from scratch — use the placed person reference + the placed tool reference. Add a single filled badge (ID card, flask cap, stethoscope head) for the duotone accent.
 
 # Library reference vocabulary
 ${renderReferenceBlock(references)}
@@ -297,39 +303,40 @@ Each item.svg must contain ≥ 3 fill="currentColor" shapes. Pure outline items 
 
 # LAST REMINDER before output
 For EACH item:
-- bbox must span ≥ 400 on BOTH axes (min ≤ 56, max ≥ 456 on x AND y).
-- ≥ 3 shapes use fill="currentColor".
-- 14~24 primitive shapes total.
-- For persona keyword: head circle exists at y ≤ 180 AND body shape ≥ 240 wide.
+- Use the placement numbers from the reference block. Single mode = 1 reference scaled large, Dual mode = primary left + secondary top-right.
+- Each placed reference MUST include vector-effect="non-scaling-stroke" on its <g> wrapper — otherwise the outline becomes too thick and hides the duotone fill underneath.
+- bbox must span ≥ 400 on BOTH axes (the placement numbers already guarantee this).
+- NEVER draw text characters, letters, letterforms, digits, or word-like glyphs as path/polygon shapes. The icon must read as a silhouette, not a logo.
+- NEVER add antennas, ear-pieces, decorative dots, sparkles, or any element not used in normal icon vocabulary.
 
-If any of these fails, REDRAW before emitting. A miniature in the center is rejected.
+If a draft would emit a tiny isolated outline shape, redraw using the placement numbers — a miniature in the center is rejected.
+Output the final JSON immediately — no thinking trace, no reasoning summary, no preface, no markdown fences. If your environment has extended thinking, keep it brief: emit the JSON as soon as the items are ready.
 
 # Output — ONE JSON object with an "items" array of EXACTLY ${count} icon${count === 1 ? '' : 's'}. NO prose. NO code fences. NO comments inside the JSON.
 
-Pre-output self-check (for every item, mentally verify):
+Pre-output self-check (MENTAL ONLY — do NOT echo this checklist or any reasoning in your output, also do NOT echo the outermost-path-duplicate technique — the REF bodies are already duotone-ready):
   [ ] viewBox is exactly "0 0 512 512"
   [ ] stroke-width="6" on root svg
   [ ] No hex / rgb / fill-opacity / stroke-opacity / opacity attributes anywhere
-  [ ] min(any shape x) ≤ 56 AND max(x+width) ≥ 456
-  [ ] min(any shape y) ≤ 56 AND max(y+height) ≥ 456
-  [ ] Count of fill="currentColor" shapes ≥ 3
-  [ ] Total primitive shape count ∈ [14, 24]
-  [ ] If KEYWORD is persona: head circle present AND body width ≥ 240
+  [ ] Each placed reference is wrapped in <g transform="translate(X Y) scale(S)" vector-effect="non-scaling-stroke"> and the REF body is pasted verbatim (no editing of fills or paths)
+  [ ] bbox spans ≥ 400 on both axes (placement numbers handle this)
+  [ ] No text characters, letterforms, antennas, or decorative additions present
   [ ] item.angle is one of the listed values AND unique across items
-If any check fails for an item, regenerate THAT item before emitting JSON.
+If any check fails for an item, silently regenerate THAT item internally — then emit ONLY the final JSON object.
 
 Shape of every item:
   - name: string — copy the KEYWORD as-is.
   - tags: array of 3~6 lowercase single-word English tags.
   - category: one lowercase English word.
-  - angle: ONE of "standard", "with-action", "minimal", "composed", "scene", "abstract". Each item picks a DIFFERENT angle.
+  - angle: ONE of "standard", "with-detail", "composed", "with-action", "minimal", "scene", "in-context", "abstract". Each item picks a DIFFERENT angle.
   - svg: a complete standalone <svg ...>...</svg> string. Must start with <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"> and end with </svg>. Escape the inner " as \\". Do NOT wrap items inside a parent svg; each item.svg stands alone.
 
 Exact example of the required output shape (this example is the format only — your content must match the KEYWORD above, NOT "Dashboard"):
 {"items":[{"name":"Dashboard","tags":["analytics","data","ui"],"category":"ui","angle":"window-scene","svg":"<svg xmlns=\\"http://www.w3.org/2000/svg\\" viewBox=\\"0 0 512 512\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"6\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><rect x=\\"40\\" y=\\"80\\" width=\\"432\\" height=\\"352\\" rx=\\"24\\"/><circle cx=\\"80\\" cy=\\"115\\" r=\\"6\\" fill=\\"currentColor\\"/><circle cx=\\"116\\" cy=\\"115\\" r=\\"6\\" fill=\\"currentColor\\"/><rect x=\\"200\\" y=\\"100\\" width=\\"240\\" height=\\"32\\" rx=\\"6\\" fill=\\"currentColor\\"/></svg>"}]}
 
-Persona example (use only when KEYWORD classifies as D):
-{"items":[{"name":"Researcher","tags":["scientist","lab","flask","person"],"category":"persona","angle":"standard","svg":"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='none' stroke='currentColor' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'><circle cx='200' cy='128' r='48'/><path d='M160 100 Q160 64 200 64 Q240 64 240 100 Q236 88 224 88 Q200 96 176 88 Q164 90 160 100Z' fill='currentColor'/><circle cx='188' cy='128' r='4' fill='currentColor'/><circle cx='212' cy='128' r='4' fill='currentColor'/><line x1='140' y1='196' x2='260' y2='196'/><path d='M120 420 Q116 280 156 240 L188 232 L188 264 Q200 280 212 264 L212 232 L244 240 Q284 280 280 420 Z' fill='currentColor'/><path d='M188 232 L200 260 L212 232'/><circle cx='200' cy='316' r='5' fill='currentColor'/><circle cx='200' cy='344' r='5' fill='currentColor'/><rect x='232' y='272' width='32' height='24' rx='4'/><line x1='260' y1='260' x2='260' y2='412'/><rect x='340' y='240' width='60' height='24' rx='4'/><path d='M348 264 L344 320 Q320 360 332 408 Q360 432 408 408 Q420 360 396 320 L392 264' fill='currentColor'/><line x1='332' y1='360' x2='408' y2='360'/><line x1='354' y1='284' x2='386' y2='284'/></svg>"}]}
+Reference-composition example (SINGLE mode — pretend REF_1 is a cylinder body):
+{"items":[{"name":"Database","tags":["database","storage","sql"],"category":"data","angle":"standard","svg":"<svg xmlns=\\"http://www.w3.org/2000/svg\\" viewBox=\\"0 0 512 512\\" fill=\\"none\\" stroke=\\"currentColor\\" stroke-width=\\"6\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><g transform=\\"translate(56 56) scale(17)\\" vector-effect=\\"non-scaling-stroke\\"><path d=\\"M4 6a8 3 0 1 0 16 0A8 3 0 1 0 4 6\\" fill=\\"currentColor\\"/><g fill=\\"none\\" stroke=\\"currentColor\\" stroke-linecap=\\"round\\" stroke-linejoin=\\"round\\"><path d=\\"M4 6a8 3 0 1 0 16 0A8 3 0 1 0 4 6\\"/><path d=\\"M4 6v6a8 3 0 0 0 16 0V6\\"/><path d=\\"M4 12v6a8 3 0 0 0 16 0v-6\\"/></g></g><circle cx=\\"430\\" cy=\\"100\\" r=\\"28\\" fill=\\"currentColor\\"/><path d=\\"M418 100 L428 110 L444 92\\" stroke=\\"currentColor\\" stroke-width=\\"4\\" fill=\\"none\\"/></svg>"}]}
+(The duplicated cylinder top with fill="currentColor" sits behind the outline group; vector-effect="non-scaling-stroke" keeps the outline at 6px regardless of the scale(17). Result: filled cylinder body + visible outline + status badge in the corner.)
 
 Constraints:
 - items.length === ${count}.

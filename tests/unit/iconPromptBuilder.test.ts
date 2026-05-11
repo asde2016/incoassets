@@ -68,34 +68,35 @@ describe('renderPrompt output content', () => {
     vi.unstubAllGlobals();
   });
 
-  it('I1: includes scale instruction (×21.3) and bold stroke note', async () => {
+  it('includes BUILDING BLOCKS language framing references as composition primitives', async () => {
     const r = await buildPrompt('연구원', '', 3);
-    expect(r.prompt).toMatch(/scale.*21\.3/);
-    expect(r.prompt).toMatch(/bold/i);
+    expect(r.prompt).toMatch(/BUILDING BLOCKS/);
   });
 
-  it('I2: includes "Duotone fill mandate" with surface categories and ≥3 fill requirement', async () => {
+  it('teaches the transform wrap technique with explicit translate/scale numbers', async () => {
+    const r = await buildPrompt('연구원', '', 3);
+    expect(r.prompt).toMatch(/transform="translate\(X Y\) scale\(S\)"/);
+    // Single mode placement number
+    expect(r.prompt).toMatch(/translate\(56 56\) scale\(17\)/);
+    // Dual mode primary placement
+    expect(r.prompt).toMatch(/translate\(40 80\) scale\(13\)/);
+  });
+
+  it('allows BOTH single and dual reference modes (no forced composition)', async () => {
+    const r = await buildPrompt('연구원', '', 3);
+    expect(r.prompt).toMatch(/SINGLE-OBJECT keyword/);
+    expect(r.prompt).toMatch(/SCENE keyword/);
+    expect(r.prompt).toMatch(/PERSONA keyword/);
+  });
+
+  it('Duotone fill mandate section retained with surface categories', async () => {
     const r = await buildPrompt('연구원', '', 3);
     expect(r.prompt).toContain('Duotone fill mandate');
     expect(r.prompt).toMatch(/Screens \/ panels/);
     expect(r.prompt).toMatch(/≥\s*3\s*fill="currentColor"/);
   });
 
-  it('I3: includes Persona (D) category with 8-part anatomy and angle enum matrix', async () => {
-    const r = await buildPrompt('연구원', '', 3);
-    expect(r.prompt).toMatch(/Persona \/ role concept/);
-    expect(r.prompt).toMatch(/Person anatomy \(8 required parts\)/);
-    expect(r.prompt).toMatch(/D \(persona\)\s*→/);
-    expect(r.prompt).toMatch(/"with-tool"/);
-    expect(r.prompt).toMatch(/"in-context"/);
-  });
-
-  it('I3: persona category instructs LLM to use ONLY persona angle enum', async () => {
-    const r = await buildPrompt('연구원', '', 3);
-    expect(r.prompt).toMatch(/use ONLY the persona angle enum/);
-  });
-
-  it('I4: includes a "LAST REMINDER before output" block placed near the end', async () => {
+  it('LAST REMINDER block sits before the # Output section', async () => {
     const r = await buildPrompt('연구원', '', 3);
     expect(r.prompt).toContain('LAST REMINDER before output');
     const reminderIdx = r.prompt.indexOf('LAST REMINDER before output');
@@ -104,17 +105,17 @@ describe('renderPrompt output content', () => {
     expect(reminderIdx).toBeLessThan(outputIdx);
   });
 
-  it('I5: includes a Pre-output self-check checklist', async () => {
+  it('Pre-output self-check is present, mental-only, and references the wrap rule', async () => {
     const r = await buildPrompt('연구원', '', 3);
     expect(r.prompt).toContain('Pre-output self-check');
-    expect(r.prompt).toMatch(/viewBox is exactly/);
-    expect(r.prompt).toMatch(/Count of fill="currentColor" shapes ≥ 3/);
+    expect(r.prompt).toMatch(/MENTAL ONLY/);
+    expect(r.prompt).toMatch(/vector-effect="non-scaling-stroke"/);
+    expect(r.prompt).toMatch(/REF body is pasted verbatim/);
   });
 
-  it('I6: includes a persona JSON example (Researcher) with at least 14 shapes', async () => {
+  it('includes a reference-composition Database example demonstrating SINGLE mode', async () => {
     const r = await buildPrompt('연구원', '', 3);
-    expect(r.prompt).toMatch(/"name":\s*"Researcher"/);
-    const exampleMatch = r.prompt.match(/"svg":\s*"<svg[^"]+\/svg>"/);
-    expect(exampleMatch).not.toBeNull();
+    expect(r.prompt).toMatch(/"name":\s*"Database"/);
+    expect(r.prompt).toMatch(/Reference-composition example/);
   });
 });

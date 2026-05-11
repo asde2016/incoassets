@@ -299,7 +299,7 @@ const ALLOWED_ATTRS_BY_TAG: Record<string, Set<string>> = {
     ...SHAPE_VFX,
   ]),
   ellipse: new Set(['cx', 'cy', 'rx', 'ry', 'fill', 'stroke', 'stroke-width', ...SHAPE_VFX]),
-  g: new Set(['transform', 'stroke-width', 'stroke', 'fill']),
+  g: new Set(['transform', 'stroke-width', 'stroke', 'fill', 'vector-effect']),
 };
 
 const CANONICAL_ROOT_ATTRS: Array<[string, string]> = [
