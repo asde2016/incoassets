@@ -1,0 +1,13 @@
+diff --git a/package.json b/package.json
+index bf0d5a5e313a3397807f775811966998bfa51132..b1ec0d5685821498b27c9310c1af7c4d53538629 100644
+--- a/package.json
++++ b/package.json
+@@ -13,7 +13,7 @@
+       "types": "./dist/pinia.d.ts",
+       "node": {
+         "import": {
+-          "production": "./dist/pinia.prod.cjs",
++          "production": "./dist/pinia.mjs",
+           "development": "./dist/pinia.mjs",
+           "default": "./dist/pinia.mjs"
+         },

@@ -1,0 +1,87 @@
+{
+  "name": "vue-starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "font": "node ./iconfont/index.cjs",
+    "icons:build": "node ./scripts/build-icon-index.cjs",
+    "preview": "nuxt build && nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@iconify-json/hugeicons": "^1.2.27",
+    "@iconify-json/lucide": "^1.2.106",
+    "@iconify-json/tabler": "^1.2.35",
+    "@vueuse/core": "^14.1.0",
+    "better-sqlite3": "^12.9.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "crypto-js": "^4.2.0",
+    "fast-xml-parser": "^5.7.3",
+    "lucide-vue-next": "^0.562.0",
+    "nanoid": "^5.1.11",
+    "pinia-plugin-persistedstate": "^4.3.0",
+    "prismjs": "1.30.0",
+    "reka-ui": "^2.7.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "vue": "^3.5.14",
+    "vue-router": "^4.5.1",
+    "vue-select": "4.0.0-beta.6",
+    "vue-sonner": "^2.0.9",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@nuxt/eslint": "^1.15.2",
+    "@nuxtjs/seo": "^3.4.0",
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@pinia/nuxt": "^0.11.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/crypto-js": "^4.2.2",
+    "@types/node": "^25.4.0",
+    "@vite-pwa/nuxt": "^1.1.1",
+    "@vue/test-utils": "^2.4.10",
+    "autoprefixer": "^10.4.23",
+    "eslint": "^10.0.3",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-vue": "^10.2.0",
+    "happy-dom": "^20.9.0",
+    "nuxt": "^4.3.1",
+    "postcss": "^8.5.6",
+    "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "sass": "1.97.3",
+    "shadcn-nuxt": "2.4.3",
+    "svgtofont": "4.2.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "better-sqlite3",
+      "esbuild",
+      "ttf2woff2",
+      "unrs-resolver",
+      "vue-demi"
+    ],
+    "patchedDependencies": {
+      "pinia@3.0.4": "patches/pinia@3.0.4.patch"
+    }
+  }
+}

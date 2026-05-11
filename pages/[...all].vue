@@ -1,0 +1,23 @@
+<template>
+  <Container>
+    <div class="flex min-h-screen items-center justify-center">
+      <div class="mb-[30dvh] text-center">
+        <h1 class="text-112">404</h1>
+        <p class="mb-32 text-20 font-medium text-gray-700">Page Not Found</p>
+        <p class="mb-8 text-gray-600">요청하신 페이지를 찾을 수 없습니다.</p>
+        <NuxtLink to="/" class="text-primary hover:text-primary-hover focus:text-primary-hover">
+          ← 메인 페이지로 가기
+        </NuxtLink>
+      </div>
+    </div>
+  </Container>
+</template>
+
+<script setup lang="ts">
+useHead({
+  title: '404',
+});
+definePageMeta({
+  layout: false,
+});
+</script>

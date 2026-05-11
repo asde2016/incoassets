@@ -1,0 +1,14 @@
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+*.min.js
+
+# Node dependencies
+node_modules
+
+# 특정 폴더 제외
+public/

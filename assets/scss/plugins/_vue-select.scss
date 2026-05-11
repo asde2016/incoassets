@@ -1,0 +1,385 @@
+.v-select {
+  position: relative;
+  min-height: 48px;
+  font-size: 1rem;
+
+  &[size='sm'] {
+    min-height: 40px;
+    font-size: 0.875rem; // 14
+    .vs__dropdown-toggle {
+      padding: 0 0.875rem;
+    }
+    .vs__dropdown-option {
+      padding: 0.594rem 0.5rem;
+      //min-height: 40px;
+    }
+    .vs__selected-options {
+      i {
+        font-size: 0.875rem;
+        //margin-top: 4px;
+      }
+    }
+    //.vs__actions::after {
+    //  right: -6px;
+    //}
+  }
+
+  &[size='lg'] {
+    min-height: 52px;
+    font-size: 1.125rem; // 18
+    .vs__dropdown-toggle {
+      padding: 0 1.125rem;
+    }
+    .vs__dropdown-option {
+      padding: 0.7815rem 0.75rem;
+      //min-height: 48px;
+    }
+    .vs__selected-options {
+      i {
+        font-size: 1.125rem;
+        //margin-top: 4px;
+      }
+    }
+  }
+
+  &.sm-popover {
+    .vs__dropdown-menu {
+      max-height: 180px;
+    }
+    .vs__dropdown-option {
+      padding: 0.5rem 0.5rem;
+    }
+  }
+
+  &.vs--unsearchable {
+    input.vs__search {
+      position: absolute;
+      width: 0;
+      height: 0;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      overflow: hidden;
+    }
+  }
+
+  input[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  &.is-invalid {
+    border-color: var(--danger);
+    .vs__dropdown-toggle {
+      border-color: var(--danger);
+    }
+    .vs__dropdown-toggle {
+      &:focus-within {
+        border-color: var(--danger);
+        --tw-ring-color: color-mix(in srgb, var(--danger) 50%, transparent);
+      }
+    }
+  }
+
+  .vs__dropdown-toggle {
+    display: flex;
+    height: 100%;
+    min-height: inherit;
+    padding: 0 1rem;
+    width: 100%;
+    align-items: center;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid var(--border);
+    //font-size: 1rem;
+    font-size: inherit;
+
+    &:focus-within {
+      border-color: var(--primary);
+      outline: 2px solid transparent;
+      outline-offset: 2px;
+      --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width)
+        var(--tw-ring-offset-color);
+      --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width))
+        var(--tw-ring-color);
+      box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+      --tw-ring-color: var(--ring);
+      --tw-ring-offset-width: 0px;
+    }
+  }
+
+  .vs__selected-options {
+    display: flex;
+    flex-basis: 100%;
+    flex-grow: 1;
+    flex-wrap: wrap;
+    padding: 0;
+    position: relative;
+    //font-size: 1rem;
+    font-size: inherit;
+    gap: 4px;
+    margin: 5px 0;
+    i {
+      font-size: 1rem;
+      //margin-top: 4px;
+    }
+  }
+
+  .vs__selected {
+    align-items: center;
+    background-color: var(--vs-selected-bg);
+    border: var(--vs-selected-border-width) var(--vs-selected-border-style)
+      var(--vs-selected-border-color);
+    border-radius: calc(var(--radius) - 2px);
+    color: var(--foreground);
+    display: flex;
+    line-height: var(--vs-line-height);
+    padding: 0;
+    z-index: 0;
+  }
+
+  .vs__search,
+  .vs__search:focus {
+    font-size: 0.875rem;
+    color: var(--foreground);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    flex-grow: 1;
+    max-width: 100%;
+    width: 0;
+    z-index: 1;
+
+    &::placeholder {
+      color: var(--muted-foreground);
+    }
+  }
+
+  .vs__dropdown-toggle[aria-expanded='true'] .vs__actions::after {
+    transform: translate(-50%, -50%) rotate(-180deg);
+  }
+  button {
+    border-radius: calc(var(--radius) - 2px);
+  }
+  .vs__actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    position: relative;
+    height: 100%;
+    padding: 0;
+    padding-right: 1rem;
+    font-weight: 500;
+    color: var(--accent-foreground);
+    > .vs__open-indicator {
+      display: none;
+    }
+    > .vs__clear > * {
+      display: none;
+    }
+
+    &::after,
+    > .vs__clear::after {
+      font-family: 'Material Icons' !important;
+      font-weight: normal;
+      font-style: normal;
+      letter-spacing: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+
+      position: absolute;
+      z-index: 1;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.25rem;
+      color: var(--gray-700);
+    }
+
+    &::after {
+      content: 'keyboard_arrow_down';
+      left: unset;
+      right: -20px;
+      transition: transform 0.3s;
+    }
+
+    > .vs__clear {
+      position: relative;
+      height: 100%;
+      width: 24px;
+      height: 24px;
+      &::after {
+        content: 'clear';
+        font-size: 1rem;
+      }
+    }
+  }
+
+  .vs__deselect {
+    position: relative;
+    height: 18px;
+    width: 18px;
+    min-width: 18px;
+    &::after {
+      content: 'clear';
+      font-family: 'Material Icons' !important;
+      font-weight: normal;
+      font-style: normal;
+      letter-spacing: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+
+      position: absolute;
+      z-index: 1;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--gray-700);
+
+      font-size: 0.825rem;
+      //right: 2px;
+    }
+    > * {
+      display: none;
+    }
+  }
+  .vs__dropdown-menu {
+    position: absolute;
+    z-index: 50;
+    width: 100%;
+    margin-top: 0.25rem;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid var(--border);
+    background: #fff;
+    padding: 0.375rem; // 6px
+    color: var(--popover-foreground);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-height: 250px;
+    overflow-y: auto;
+  }
+
+  .vs__dropdown-option {
+    cursor: pointer;
+    border-radius: calc(var(--radius) - 2px);
+    padding: 0.75rem 0.625rem;
+    font-size: inherit;
+    font-weight: 500;
+    //min-height: 48px;
+    display: flex;
+    align-items: center;
+  }
+
+  .vs__dropdown-option--highlight {
+    background: var(--primary-foreground);
+    color: var(--primary);
+  }
+
+  .vs__dropdown-option--selected {
+    color: var(--primary);
+  }
+
+  .vs__no-options {
+    padding: 0.375rem 0.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+  }
+
+  .vs__spinner {
+    display: none !important;
+  }
+
+  .vs__loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem;
+  }
+
+  .vs__loading-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: vs-spin 0.6s linear infinite;
+  }
+
+  @keyframes vs-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  &.vs--disabled {
+    .vs__dropdown-toggle {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+}
+
+//multiple
+.v-select.vs--multiple {
+  &:not([seleted-count='true']) .vs__selected-options {
+    .vs__selected {
+      background-color: var(--gray-100);
+      padding: 3px 4px;
+      padding-left: 8px;
+      border-radius: calc(var(--radius) - 2px);
+    }
+  }
+  // 갯수 표시
+  &[seleted-count='true'] {
+    .vs__selected-options {
+      .vs__selected {
+        &::after {
+          font-size: 14px;
+          position: absolute;
+          right: 6px; // 50+40
+          top: 50%;
+          transform: translateY(-50%);
+          background-color: #fff;
+          padding: 0 2px;
+          white-space: nowrap;
+        }
+        &:nth-of-type(1) {
+          position: unset;
+          > .vs__deselect {
+            display: none;
+          }
+        }
+        &:not(:nth-of-type(1)) {
+          position: absolute;
+          right: 0;
+          top: 0;
+          color: transparent;
+          height: 100%;
+          margin: 0;
+          > * {
+            display: none;
+          }
+        }
+        @for $i from 2 to 100 {
+          &:nth-of-type(#{$i}) {
+            z-index: $i;
+            &::after {
+              content: '외 #{$i - 1}개';
+              color: var(--gray-500);
+            }
+          }
+        }
+      }
+    }
+    &[size='sm'] {
+      .vs__selected-options .vs__selected::after {
+        font-size: 12px;
+        right: 0px;
+      }
+    }
+  }
+}

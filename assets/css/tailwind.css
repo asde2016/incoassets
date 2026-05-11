@@ -1,0 +1,199 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --gray-50: #f7f8f7;
+    --gray-100: #e9ecef;
+    --gray-200: #dee2e6;
+    --gray-300: #d9dbde;
+    --gray-400: #ced4da;
+    --gray-500: #adb5bd;
+    --gray-600: #676e78;
+    --gray-700: #495057;
+    --gray-800: #343a40;
+    --gray-900: #212529;
+
+    --blue: #007bff;
+    --indigo: #6610f2;
+    --purple: #6f42c1;
+    --pink: #e83e8c;
+    --red: #dc3545;
+    --orange: #fd7e14;
+    --yellow: #ffc107;
+    --green: #31bc8d;
+    --navy: #17649d;
+    --teal: #20c997;
+    --cyan: #17a2b8;
+
+    --background: #ffffff;
+    --foreground: #020817;
+
+    --card: #ffffff;
+    --card-foreground: #020817;
+
+    --popover: #ffffff;
+    --popover-foreground: #020817;
+
+    --primary: #31bc8d;
+    --primary-foreground: #f5fcf9;
+
+    --secondary: rgb(103, 110, 120);
+    --secondary-foreground: var(--gray-900);
+
+    --muted: #f1f5f9;
+    --muted-foreground: var(--gray-400);
+
+    --accent: #f7f8f7;
+    --accent-foreground: var(--gray-900);
+
+    --danger: #dc3545;
+    --danger-foreground: color-mix(in srgb, var(--danger), white 15%);
+
+    --success: var(--green);
+    --success-foreground: #f5fcf9;
+
+    --info: var(--cyan);
+    --info-foreground: color-mix(in srgb, var(--info), white 15%);
+
+    --warning: var(--yellow);
+    --warning-foreground: color-mix(in srgb, var(--warning), white 15%);
+
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+
+    --border: #d9dbde;
+    --input: #e2e8f0;
+    --ring: color-mix(in srgb, var(--primary) 50%, transparent);
+
+    --radius: 0.5rem;
+    --white: #ffffff;
+
+    --zindex-dropdown: 1000;
+    --zindex-sticky: 1020;
+    --zindex-fixed: 1030;
+    --zindex-offcanvas-backdrop: 1040;
+    --zindex-offcanvas: 1045;
+    --zindex-header: 1046;
+    --zindex-modal-backdrop: 1050;
+    --zindex-modal: 1055;
+    --zindex-popover: 1070;
+    --zindex-tooltip: 1080;
+    --zindex-loading: 1090;
+    --zindex-toast: 1100;
+  }
+
+  /* .dark {
+    --background: #020817;
+    --foreground: #f8fafc;
+
+    --card: #020817;
+    --card-foreground: #f8fafc;
+
+    --popover: #020817;
+    --popover-foreground: #f8fafc;
+
+    --primary: #f8fafc;
+    --primary-foreground: #0f172a;
+
+    --secondary: #1e293b;
+    --secondary-foreground: #f8fafc;
+
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+
+    --accent: #1e293b;
+    --accent-foreground: #f8fafc;
+
+    --destructive: #7f1d1d;
+    --destructive-foreground: #f8fafc;
+
+    --border: #1e293b;
+    --input: #1e293b;
+    --ring: #cbd5e1;
+  } */
+}
+
+@layer base {
+  body {
+    @apply bg-background font-sans text-foreground text-gray-700;
+    word-break: keep-all;
+
+    * {
+      @apply border-border;
+
+      /* scrollbar */
+      &::-webkit-scrollbar {
+        width: 18px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        border-radius: 12px;
+        border: 5px solid transparent;
+        box-shadow: inset 0 0 8px 8px var(--gray-500);
+      }
+
+      &::-webkit-scrollbar-track {
+        border-radius: 12px;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 5px solid transparent;
+        border-bottom: 5px solid transparent;
+        box-shadow: inset 0 0 8px 8px var(--gray-100);
+        background-color: transparent;
+        /*background-color: var(--gray-100);*/
+      }
+    }
+  }
+  a,
+  button,
+  [tabindex]:not([tabindex='-1']) {
+    @apply ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0;
+  }
+  a:hover {
+    @apply text-primary duration-200;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    line-height: 1.2;
+    @apply font-semibold;
+    @apply text-gray-800;
+  }
+  h1 {
+    @apply text-48;
+  }
+  h2 {
+    @apply text-32;
+  }
+  h3 {
+    @apply text-28;
+  }
+  h4 {
+    @apply text-24;
+  }
+  h5 {
+    @apply text-20;
+  }
+  h6 {
+    @apply text-16;
+  }
+}
+
+@layer utilities {
+  .text-stable::after {
+    content: attr(data-text);
+    display: block;
+    font-weight: 500;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+    user-select: none;
+  }
+}
