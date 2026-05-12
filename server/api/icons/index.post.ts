@@ -1,63 +1,40 @@
-import { defineEventHandler, readBody, createError } from 'h3';
-import { z } from 'zod';
-import {
-  parseUploadInput,
-  validateAndNormalizeSvg,
-  validateMeta,
-  makeSlug,
-} from '~/utils/svg/validate';
+import { validateMeta, makeSlug, type IconMeta } from '~/utils/svg/meta';
 import { insertIcon } from '~/server/utils/repo/icons';
 
-const BodySchema = z.object({
-  name: z.string(),
-  tags: z.array(z.string()).default([]),
-  category: z.string().default(''),
-  description: z.string().default(''),
-  svg: z.string(),
-});
+export default defineEventHandler(async (event) => {
+  const body = (await readBody(event)) as {
+    name?: unknown;
+    tags?: unknown;
+    category?: unknown;
+    description?: unknown;
+    svg?: unknown;
+  } | null;
 
-export default defineEventHandler(async event => {
-  const raw = await readBody(event);
-  const parsed = BodySchema.safeParse(raw);
-  if (!parsed.success) {
-    throw createError({
-      statusCode: 400,
-      data: { error: { code: 'INVALID_INPUT', message: parsed.error.message } },
-    });
+  if (typeof body?.svg !== 'string' || !body.svg.startsWith('<svg')) {
+    throw createError({ statusCode: 400, statusMessage: 'svg required' });
   }
 
-  const meta = validateMeta({
-    name: parsed.data.name,
-    tags: parsed.data.tags,
-    category: parsed.data.category,
-    description: parsed.data.description,
+  const metaResult = validateMeta({
+    name: typeof body.name === 'string' ? body.name : '',
+    tags: Array.isArray(body.tags) ? (body.tags as string[]) : [],
+    category: typeof body.category === 'string' ? body.category : '',
+    description: typeof body.description === 'string' ? body.description : '',
   });
-  if (!meta.ok) {
+  if (!metaResult.ok) {
     throw createError({
-      statusCode: 400,
-      data: { error: { code: 'INVALID_INPUT', message: meta.errors.join('; ') } },
+      statusCode: 422,
+      statusMessage: metaResult.errors.join('; '),
     });
   }
 
-  const upload = parseUploadInput(parsed.data.svg);
-  const svgValidation = validateAndNormalizeSvg(upload.svg);
-  if (!svgValidation.ok) {
-    throw createError({
-      statusCode: 400,
-      data: {
-        error: { code: 'INVALID_SVG', message: svgValidation.errors.join('; ') },
-      },
-    });
-  }
-
-  const slug = makeSlug(meta.meta.name);
+  const {meta} = metaResult;
   const inserted = insertIcon({
-    name: meta.meta.name,
-    slug,
-    category: meta.meta.category,
-    description: meta.meta.description,
-    tags: meta.meta.tags,
-    svg: svgValidation.svg,
+    name: meta.name,
+    slug: makeSlug(meta.name),
+    tags: meta.tags,
+    category: meta.category,
+    description: meta.description,
+    svg: body.svg,
   });
 
   return {

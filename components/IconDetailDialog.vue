@@ -84,8 +84,8 @@ function onDownload() {
           <dt class="text-gray-500">Tags</dt>
           <dd class="flex flex-wrap gap-4">
             <Badge
-              v-for="tag in icon.tags"
               :key="tag"
+              v-for="tag in icon.tags"
               variant="outline-primary">
               {{ tag }}
             </Badge>

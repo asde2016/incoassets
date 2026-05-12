@@ -1,248 +1,410 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
-import { parseUploadList, validateAndNormalizeSvg } from '~/utils/svg/validate';
-import type { ResultItem } from '~/utils/svg/validate';
-import IconResultCard from '~/components/IconResultCard.vue';
+import { computed, ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
+import { useSearch, type IconDto } from '~/stores/search';
+import { useCustomize } from '~/stores/customize';
 
 const props = defineProps<{ open: boolean; keyword: string }>();
 const emit = defineEmits<{ close: [] }>();
 
-const localKeyword = ref<string>('');
-const description = ref<string>('');
-const count = ref<number>(3);
+const search = useSearch();
+const customize = useCustomize();
 
-// Prompt-build state
-const buildingPrompt = ref<boolean>(false);
-const buildError = ref<string>('');
-const generatedPrompt = ref<string>('');
-const references = ref<{ id: string }[]>([]);
-const tokens = ref<string[]>([]);
-const promptCopied = ref(false);
+const localKeyword = ref('');
+const description = ref('');
+const promptText = ref('');
+const backgroundHex = ref<'#FFFFFF' | '#000000'>('#FFFFFF');
+const buildError = ref('');
+const buildLoading = ref(false);
 
-// Paste / result state
-const rawInput = ref<string>('');
-const results = ref<ResultItem[]>([]);
+const pngFile = ref<File | null>(null);
+const convertedSvg = ref('');
+const convertLoading = ref(false);
+const convertError = ref('');
+const isDragging = ref(false);
 
-const COUNT_OPTIONS = [1, 2, 3, 4, 6, 8];
+const name = ref('');
+const tagsText = ref('');
+const category = ref('');
+const detailDescription = ref('');
+const saveLoading = ref(false);
+const saveError = ref('');
 
-let resettingOnOpen = false;
+// Wizard 의 활성 step. action 성공 시 자동 증가하지만 StepperTrigger 로
+// 이전 step 으로 자유 이동 가능 (이미 거친 step 한정).
+const currentStep = ref<1 | 2 | 3 | 4>(1);
 
+const canBuild = computed(
+  () => localKeyword.value.trim().length > 0 && !buildLoading.value
+);
+const canConvert = computed(() => !!pngFile.value && !convertLoading.value);
+const canSave = computed(
+  () => !!convertedSvg.value && name.value.trim().length > 0 && !saveLoading.value
+);
+
+// 모달이 열릴 때 step·local state 초기화. customize.color 는 store 가 가진
+// 마지막 값 그대로 유지 (CustomizePanel 에서 설정한 색이 prompt 빌더에 그대로 반영).
 watch(
   () => props.open,
-  open => {
+  (open) => {
     if (open) {
-      resettingOnOpen = true;
+      currentStep.value = 1;
       localKeyword.value = props.keyword || '';
       description.value = '';
-      generatedPrompt.value = '';
-      references.value = [];
-      tokens.value = [];
-      rawInput.value = '';
-      results.value = [];
+      promptText.value = '';
+      backgroundHex.value = '#FFFFFF';
       buildError.value = '';
-      buildingPrompt.value = false;
-      nextTick(() => {
-        resettingOnOpen = false;
-      });
+      buildLoading.value = false;
+      pngFile.value = null;
+      convertedSvg.value = '';
+      convertLoading.value = false;
+      convertError.value = '';
+      name.value = '';
+      tagsText.value = '';
+      category.value = '';
+      detailDescription.value = '';
+      saveLoading.value = false;
+      saveError.value = '';
     }
   }
 );
 
-watch(rawInput, val => {
-  if (resettingOnOpen) return;
-  if (!val.trim()) {
-    results.value = [];
-    return;
-  }
-  results.value = parseUploadList(val).map((p, i) => {
-    const v = validateAndNormalizeSvg(p.svg);
-    return {
-      id: `r-${Date.now()}-${i}`,
-      svg: v.ok ? v.svg : p.svg,
-      validation: v,
-      rawMeta: p.meta,
-    };
-  });
-});
-
-const validResultCount = computed(() => results.value.filter(r => r.validation.ok).length);
-
-const canBuild = computed(() => localKeyword.value.trim().length > 0 && !buildingPrompt.value);
-
-function onOpenChange(v: boolean) {
-  if (!v && !buildingPrompt.value) emit('close');
-}
-
 async function onBuildPrompt() {
-  if (!canBuild.value) return;
-  buildingPrompt.value = true;
+  buildLoading.value = true;
   buildError.value = '';
-  generatedPrompt.value = '';
-  references.value = [];
-  tokens.value = [];
+  promptText.value = '';
+
+  // ollama 메타 추론은 사용자 흐름과 병렬. 실패해도 prompt 흐름은 진행되도록 catch.
+  $fetch<{ category: string; tags: string[] }>('/api/icons/suggest-meta', {
+    method: 'POST',
+    body: {
+      keyword: localKeyword.value.trim(),
+      description: description.value,
+    },
+  })
+    .then((meta) => {
+      // 사용자가 이미 직접 입력했다면 덮어쓰지 않음
+      if (!category.value && meta.category) category.value = meta.category;
+      if (!tagsText.value && meta.tags.length > 0) {
+        tagsText.value = meta.tags.join(', ');
+      }
+    })
+    .catch(() => {
+      /* ollama 미실행·실패는 silent fallback — 메타는 사용자가 직접 입력 */
+    });
 
   try {
-    const res = await fetch('/api/icons/build-prompt', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        keyword: localKeyword.value.trim(),
-        description: description.value.trim(),
-        count: count.value,
-      }),
-    });
-    if (!res.ok) {
-      const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-      throw new Error(j?.error?.message ?? `HTTP ${res.status}`);
-    }
-    const json = (await res.json()) as {
-      prompt: string;
-      tokens: string[];
-      references: { id: string }[];
-    };
-    generatedPrompt.value = json.prompt;
-    tokens.value = json.tokens ?? [];
-    references.value = json.references ?? [];
-  } catch (e: unknown) {
+    const res = await $fetch<{ prompt: string; backgroundHex: '#FFFFFF' | '#000000' }>(
+      '/api/icons/build-prompt',
+      {
+        method: 'POST',
+        body: {
+          keyword: localKeyword.value.trim(),
+          baseHex: customize.color,
+          description: description.value,
+        },
+      }
+    );
+    promptText.value = res.prompt;
+    backgroundHex.value = res.backgroundHex;
+    currentStep.value = 2;
+  } catch (e) {
     buildError.value = e instanceof Error ? e.message : '프롬프트 생성 실패';
   } finally {
-    buildingPrompt.value = false;
+    buildLoading.value = false;
   }
 }
 
 async function onCopyPrompt() {
-  if (!generatedPrompt.value) return;
+  if (!promptText.value) return;
   try {
-    await navigator.clipboard.writeText(generatedPrompt.value);
-    promptCopied.value = true;
-    setTimeout(() => (promptCopied.value = false), 1500);
+    await navigator.clipboard.writeText(promptText.value);
+    toast.success('프롬프트 복사됨');
+    currentStep.value = 3;
   } catch {
     /* clipboard unavailable */
   }
+}
+
+function acceptFile(f: File | null | undefined) {
+  if (!f) return;
+  if (!f.type.startsWith('image/png')) {
+    convertError.value = 'PNG 파일만 업로드 가능합니다.';
+    return;
+  }
+  pngFile.value = f;
+  convertedSvg.value = '';
+  convertError.value = '';
+}
+
+function onPickFile(ev: Event) {
+  const t = ev.target as HTMLInputElement;
+  acceptFile(t.files?.[0] ?? null);
+}
+
+function onDropFile(ev: DragEvent) {
+  isDragging.value = false;
+  acceptFile(ev.dataTransfer?.files?.[0] ?? null);
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+async function onConvert() {
+  if (!pngFile.value) return;
+  convertLoading.value = true;
+  convertError.value = '';
+  convertedSvg.value = '';
+  try {
+    const form = new FormData();
+    form.append('file', pngFile.value);
+    form.append('baseHex', customize.color);
+    form.append('backgroundHex', backgroundHex.value);
+    const res = await $fetch<{ svg: string }>('/api/icons/png-to-svg', {
+      method: 'POST',
+      body: form,
+    });
+    convertedSvg.value = res.svg;
+    currentStep.value = 4;
+  } catch (e) {
+    convertError.value = e instanceof Error ? e.message : 'SVG 변환 실패';
+  } finally {
+    convertLoading.value = false;
+  }
+}
+
+async function onSave() {
+  saveLoading.value = true;
+  saveError.value = '';
+  try {
+    const tags = tagsText.value
+      .split(/[,#\n]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    const row = await $fetch<IconDto>('/api/icons', {
+      method: 'POST',
+      body: {
+        name: name.value.trim(),
+        tags,
+        category: category.value.trim(),
+        description: detailDescription.value.trim(),
+        svg: convertedSvg.value,
+      },
+    });
+    search.add(row);
+    toast.success('등록 완료');
+    emit('close');
+  } catch (e) {
+    saveError.value = e instanceof Error ? e.message : '등록 실패';
+  } finally {
+    saveLoading.value = false;
+  }
+}
+
+function onOpenChange(v: boolean) {
+  if (!v) emit('close');
 }
 </script>
 
 <template>
   <Dialog :open="open" @update:open="onOpenChange">
-    <DialogContent size="xl">
+    <DialogContent size="lg">
       <template #header>
         <DialogHeader>
-          <DialogTitle>AI 아이콘 생성</DialogTitle>
+          <DialogTitle>아이콘 생성</DialogTitle>
           <DialogDescription>
-            ① 키워드 입력 → ② 로컬 Ollama가 라이브러리에서 관련 아이콘을 골라 프롬프트를 만들어 줍니다 →
-            ③ 이 프롬프트를 Claude / GPT 등에 붙여넣어 결과를 받고 → ④ 아래 결과 영역에 다시 붙여넣어 저장하세요.
+            외부 LLM 으로 만든 duotone PNG 를 SVG 로 변환해 라이브러리에 등록합니다.
           </DialogDescription>
         </DialogHeader>
       </template>
 
-      <div class="grid grid-cols-1 gap-24 md:grid-cols-2">
-        <div class="flex flex-col gap-16">
+      <div class="flex flex-col gap-24">
+        <Stepper class="px-4" v-model="currentStep">
+          <StepperItem :step="1">
+            <StepperTrigger>
+              <StepperIndicator>1</StepperIndicator>
+              <StepperTitle>입력</StepperTitle>
+              <StepperDescription>키워드 · 색 · 설명</StepperDescription>
+            </StepperTrigger>
+            <StepperSeparator />
+          </StepperItem>
+          <StepperItem :step="2" :disabled="!promptText">
+            <StepperTrigger>
+              <StepperIndicator>2</StepperIndicator>
+              <StepperTitle>프롬프트 복사</StepperTitle>
+              <StepperDescription>외부 LLM 에 붙여넣기</StepperDescription>
+            </StepperTrigger>
+            <StepperSeparator />
+          </StepperItem>
+          <StepperItem :step="3" :disabled="!promptText">
+            <StepperTrigger>
+              <StepperIndicator>3</StepperIndicator>
+              <StepperTitle>PNG 업로드</StepperTitle>
+              <StepperDescription>SVG 로 변환</StepperDescription>
+            </StepperTrigger>
+            <StepperSeparator />
+          </StepperItem>
+          <StepperItem :step="4" :disabled="!convertedSvg">
+            <StepperTrigger>
+              <StepperIndicator>4</StepperIndicator>
+              <StepperTitle>등록</StepperTitle>
+              <StepperDescription>메타 입력 후 저장</StepperDescription>
+            </StepperTrigger>
+          </StepperItem>
+        </Stepper>
+
+        <!-- Step 1: 입력 -->
+        <section v-if="currentStep === 1" class="flex flex-col gap-12">
           <div>
-            <label class="text-13 font-medium text-gray-700">
+            <Label for="um-keyword">
               키워드 <span class="text-danger">*</span>
-            </label>
-            <input
-              placeholder="예: 연구원, 클라우드 데이터, 결제"
-              class="mt-4 h-40 w-full rounded-md border border-gray-200 bg-white px-12 text-14 outline-none focus:border-primary"
+            </Label>
+            <Input
+              id="um-keyword"
+              size="sm"
+              placeholder="예: 결제, 클라우드"
               v-model="localKeyword" />
           </div>
 
-          <label class="block text-13 text-gray-700">
-            설명
-            <textarea
-              rows="2"
+          <div>
+            <Label for="um-description">설명</Label>
+            <Textarea
+              id="um-description"
+              rows="4"
+              class="px-14 text-14"
               maxlength="500"
               placeholder="아이콘 의도·맥락"
-              class="mt-4 w-full resize-y rounded-md border border-gray-200 px-12 py-8 text-13 outline-none focus:border-primary"
               v-model="description" />
+          </div>
+
+          <p v-if="buildError" class="text-12 text-danger">{{ buildError }}</p>
+        </section>
+
+        <!-- Step 2: 프롬프트 출력 -->
+        <section v-else-if="currentStep === 2" class="flex flex-col gap-8">
+          <Label>생성된 프롬프트</Label>
+          <Textarea
+            readonly
+            rows="14"
+            class="font-mono text-11"
+            :model-value="promptText" />
+          <p class="text-12 text-gray-500">
+            아래 「프롬프트 복사」 를 누르고 Claude / GPT 에 붙여넣어 PNG 를 받아오세요.
+          </p>
+        </section>
+
+        <!-- Step 3: PNG 업로드 -->
+        <section v-else-if="currentStep === 3" class="flex flex-col gap-8">
+          <Label>결과 PNG</Label>
+          <label
+            class="relative flex cursor-pointer flex-col items-center justify-center gap-6 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 px-24 py-40 text-center transition hover:border-primary hover:bg-primary/5"
+            :class="{ '!border-primary !bg-primary/10': isDragging }"
+            @dragover.prevent="isDragging = true"
+            @dragleave.prevent="isDragging = false"
+            @drop.prevent="onDropFile">
+            <input
+              id="um-png"
+              type="file"
+              accept="image/png"
+              class="sr-only"
+              @change="onPickFile" />
+            <i class="material-icons text-32 text-gray-400">cloud_upload</i>
+            <div v-if="pngFile" class="text-13 text-gray-700">
+              <span class="font-medium">{{ pngFile.name }}</span>
+              <span class="ml-8 text-12 text-gray-500">({{ formatBytes(pngFile.size) }})</span>
+            </div>
+            <div v-else class="text-13 text-gray-600">
+              <span class="font-medium text-primary">파일 선택</span>
+              또는 여기로 드래그
+            </div>
+            <p class="text-12 text-gray-400">PNG · 최대 10 MB</p>
           </label>
+          <p v-if="convertError" class="text-12 text-danger">{{ convertError }}</p>
+        </section>
 
-          <div class="flex items-center gap-12">
-            <label class="flex items-center gap-8 text-13 text-gray-700">
-              결과 개수
-              <select
-                :disabled="buildingPrompt"
-                class="h-32 rounded-md border border-gray-200 bg-white px-8 text-13 outline-none focus:border-primary"
-                v-model.number="count">
-                <option :value="n" v-for="n in COUNT_OPTIONS" :key="n">{{ n }}개</option>
-              </select>
-            </label>
-            <button
-              type="button"
-              class="flex h-36 items-center gap-6 rounded-md bg-primary px-16 text-13 font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="!canBuild"
-              @click="onBuildPrompt">
-              <i class="material-icons text-16">auto_awesome</i>
-              {{ buildingPrompt ? '프롬프트 만드는 중…' : '프롬프트 생성' }}
-            </button>
+        <!-- Step 4: 미리보기 + 메타 -->
+        <section v-else class="grid grid-cols-1 gap-16 md:grid-cols-2">
+          <div class="rounded-md border border-gray-200 bg-white p-12">
+            <div class="aspect-square w-full" v-html="convertedSvg" />
           </div>
-
-          <div
-            v-if="buildError"
-            class="rounded-md border border-danger/30 bg-danger/5 px-12 py-8 text-12 text-danger">
-            {{ buildError }}
-          </div>
-
-          <div v-if="generatedPrompt" class="flex flex-col gap-6">
-            <div class="flex items-center justify-between text-12 text-gray-500">
-              <span>
-                생성된 프롬프트
-                <span v-if="tokens.length > 0">· tokens: {{ tokens.join(', ') }}</span>
-              </span>
-              <button
-                type="button"
-                class="flex items-center gap-4 rounded-md border border-gray-200 bg-white px-10 py-4 text-12 text-gray-700 transition hover:bg-gray-100"
-                @click="onCopyPrompt">
-                <i class="material-icons text-14">{{ promptCopied ? 'check' : 'content_copy' }}</i>
-                {{ promptCopied ? '복사됨' : '프롬프트 복사' }}
-              </button>
+          <div class="flex flex-col gap-10">
+            <div>
+              <Label for="um-name">
+                이름 <span class="text-danger">*</span>
+              </Label>
+              <Input
+                id="um-name"
+                size="sm"
+                placeholder="아이콘 이름"
+                v-model="name" />
             </div>
-            <textarea
-              readonly
-              class="h-[14rem] w-full resize-y rounded-md border border-gray-200 bg-gray-50 p-12 font-mono text-11 text-gray-700 outline-none"
-              :value="generatedPrompt" />
-            <div v-if="references.length > 0" class="truncate text-11 text-gray-400">
-              참조: <span class="font-mono">{{ references.map(r => r.id).join(' · ') }}</span>
+            <div>
+              <Label for="um-tags">
+                태그 <span class="text-danger">*</span>
+              </Label>
+              <Input
+                id="um-tags"
+                size="sm"
+                placeholder="콤마 또는 해시 구분"
+                v-model="tagsText" />
             </div>
+            <div>
+              <Label for="um-category">
+                카테고리 <span class="text-danger">*</span>
+              </Label>
+              <Input
+                id="um-category"
+                size="sm"
+                placeholder="예: 결제, 사용자"
+                v-model="category" />
+            </div>
+            <p v-if="saveError" class="text-12 text-danger">{{ saveError }}</p>
           </div>
-
-          <div class="flex flex-col gap-6">
-            <label class="text-13 font-medium text-gray-700">
-              결과 붙여넣기 (Claude / GPT 출력)
-            </label>
-            <textarea
-              class="h-[12rem] w-full resize-none rounded-md border border-gray-200 bg-white p-12 font-mono text-12 outline-none focus:border-primary"
-              placeholder='{ "items": [ { "name":"...", "svg":"<svg ...>...</svg>" }, ... ] }'
-              v-model="rawInput" />
-          </div>
-        </div>
-
-        <div class="flex flex-col">
-          <div class="mb-12 text-13 text-gray-600">
-            결과
-            <template v-if="results.length > 0">
-              · {{ localKeyword || '키워드 없음' }} · {{ results.length }}개
-              <span v-if="validResultCount !== results.length" class="text-gray-400">
-                (valid {{ validResultCount }} / invalid {{ results.length - validResultCount }})
-              </span>
-            </template>
-          </div>
-          <div
-            v-if="results.length > 0"
-            class="grid grid-cols-2 gap-12 lg:grid-cols-3">
-            <IconResultCard
-              :key="item.id"
-              v-for="item in results"
-              :item="item"
-              :fallback-name="localKeyword || ''" />
-          </div>
-          <div
-            v-else
-            class="flex flex-1 items-center justify-center rounded-md border border-dashed border-gray-200 bg-gray-50 p-24 text-13 text-gray-400">
-            붙여넣은 결과가 여기에 표시됩니다.
-          </div>
-        </div>
+        </section>
       </div>
+
+      <template #footer>
+        <DialogFooter>
+          <DialogClose as-child>
+            <Button variant="outline">닫기</Button>
+          </DialogClose>
+          <Button
+            v-if="currentStep === 1"
+            type="button"
+            variant="primary"
+            :disabled="!canBuild"
+            @click="onBuildPrompt">
+            {{ buildLoading ? '프롬프트 만드는 중…' : '프롬프트 생성' }}
+          </Button>
+          <Button
+            v-else-if="currentStep === 2"
+            type="button"
+            variant="primary"
+            @click="onCopyPrompt">
+            <i class="material-icons text-16">content_copy</i>
+            프롬프트 복사
+          </Button>
+          <Button
+            v-else-if="currentStep === 3"
+            type="button"
+            variant="primary"
+            :disabled="!canConvert"
+            @click="onConvert">
+            {{ convertLoading ? '변환 중…' : 'SVG 로 변환' }}
+          </Button>
+          <Button
+            v-else
+            type="button"
+            variant="primary"
+            :disabled="!canSave"
+            @click="onSave">
+            {{ saveLoading ? '등록 중…' : '등록' }}
+          </Button>
+        </DialogFooter>
+      </template>
     </DialogContent>
   </Dialog>
 </template>

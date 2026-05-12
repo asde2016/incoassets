@@ -18,7 +18,7 @@ export function useApi() {
     if (import.meta.server) {
       const reqHeaders = useRequestHeaders(['cookie']);
       if (reqHeaders.cookie) {
-        headers['cookie'] = reqHeaders.cookie;
+        headers.cookie = reqHeaders.cookie;
       }
     }
 

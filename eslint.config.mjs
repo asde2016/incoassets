@@ -4,12 +4,30 @@ import { FlatCompat } from '@eslint/eslintrc';
 const compat = new FlatCompat();
 
 export default withNuxt(
-  { ignores: ['components/ui/**', 'pages/template.vue', 'iconfont/**'] },
+  { ignores: ['components/ui/**', 'pages/template.vue', 'iconfont/**', '.backups/**'] },
   ...compat.extends('airbnb-base').map(config => ({
     ...config,
     plugins: {},
   })),
   ...compat.extends('prettier'),
+  {
+    files: [
+      'server/utils/imageProcessing/**/*.ts',
+      'server/utils/pngToSvg.ts',
+      'tests/unit/imageProcessing/**/*.ts',
+      'tests/unit/pngToSvg.test.ts',
+    ],
+    rules: {
+      // Low-level pixel/loop processing — airbnb-base's hot-loop hostility
+      // (no-plusplus, no-continue, no-restricted-syntax, prefer-destructuring,
+      // no-cond-assign) hurts readability and perf here.
+      'no-plusplus': 'off',
+      'no-continue': 'off',
+      'no-restricted-syntax': 'off',
+      'no-cond-assign': 'off',
+      'prefer-destructuring': 'off',
+    },
+  },
   {
     rules: {
       // ──── TypeScript가 처리 (ESLint 중복 방지) ────

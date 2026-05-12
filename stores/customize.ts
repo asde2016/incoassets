@@ -2,12 +2,12 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
-export type ColorMode = 'default' | 'linear';
+export type ColorMode = 'duotone' | 'linear';
 
 const DEFAULTS = {
   size: 96,
   strokeWidth: 6,
-  mode: 'default' as ColorMode,
+  mode: 'duotone' as ColorMode,
   color: '#57A3FF',
 };
 
@@ -24,11 +24,19 @@ export const useCustomize = defineStore('customize', () => {
     color.value = DEFAULTS.color;
   }
 
+  // Migrate legacy localStorage value 'default' → 'duotone'
+  function migrate() {
+    if ((mode.value as string) === 'default') {
+      mode.value = 'duotone';
+    }
+  }
+
   return {
     size,
     strokeWidth,
     mode,
     color,
     reset,
+    migrate,
   };
 });

@@ -84,20 +84,32 @@
   }
 }
 
-/* Native color input chrome strip-down so it reads as a clean swatch */
+/* Native color input chrome strip-down so it reads as a clean swatch.
+   Browsers add internal padding to <input type="color">; we strip it and
+   force the inner swatch to fill 100% so the visible color matches the
+   element's box exactly (no squashed-rectangle look in flex containers). */
 .color-swatch {
   padding: 0;
   overflow: hidden;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
 
   &::-webkit-color-swatch-wrapper {
     padding: 0;
+    width: 100%;
+    height: 100%;
   }
   &::-webkit-color-swatch {
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
+    width: 100%;
+    height: 100%;
   }
   &::-moz-color-swatch {
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
+    width: 100%;
+    height: 100%;
   }
 }

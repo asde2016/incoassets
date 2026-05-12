@@ -41,7 +41,7 @@ const BodySlot: FunctionalComponent = () => {
   const vnodes = slots.default?.() || [];
   if (vnodes.length === 1) {
     return cloneVNode(vnodes[0], {
-      class: 'max-h-[70dvh] overflow-y-auto',
+      class: '',
     });
   }
   return h('div', { class: 'text-danger' }, vnodes);

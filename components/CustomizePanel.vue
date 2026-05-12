@@ -41,12 +41,12 @@ const c = useCustomize();
           </div>
           <input
             id="cz-stroke"
-            v-model.number="c.strokeWidth"
             type="range"
             min="4"
-            max="8"
+            max="20"
             step="1"
-            class="range-feather" />
+            class="range-feather"
+            v-model.number="c.strokeWidth" />
         </div>
 
         <div>
@@ -56,12 +56,12 @@ const c = useCustomize();
               type="button"
               class="rounded px-12 py-4 transition"
               :class="
-                c.mode === 'default'
+                c.mode === 'duotone'
                   ? 'bg-dark text-dark-foreground'
                   : 'text-gray-600 hover:bg-gray-100'
               "
-              @click="c.mode = 'default'">
-              Default
+              @click="c.mode = 'duotone'">
+              Duotone
             </button>
             <button
               type="button"
@@ -79,14 +79,14 @@ const c = useCustomize();
 
         <div class="flex items-center gap-8">
           <input
-            v-model="c.color"
             type="color"
             aria-label="색상 선택"
-            class="color-swatch h-32 w-32 cursor-pointer rounded-md border border-gray-200" />
+            class="color-swatch h-32 w-32 cursor-pointer rounded-md border border-gray-200"
+            v-model="c.color" />
           <input
-            v-model="c.color"
             type="text"
-            class="h-32 flex-1 rounded-md border border-gray-200 px-12 font-mono text-13 outline-none focus:border-primary" />
+            class="h-32 flex-1 rounded-md border border-gray-200 px-12 font-mono text-13 outline-none focus:border-primary"
+            v-model="c.color" />
         </div>
       </CardContent>
     </Card>
