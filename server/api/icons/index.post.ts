@@ -72,5 +72,6 @@ export default defineEventHandler(async (event) => {
     tags: JSON.parse(inserted.tagsJson),
     svg: inserted.svg,
     createdAt: inserted.createdAt,
+    message: 'SVG를 생성했습니다.',
   };
 });

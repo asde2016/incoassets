@@ -3,7 +3,7 @@
     <section class="mb-32 text-center">
       <h1 class="text-32 font-semibold text-gray-900">사내 SVG 자산 라이브러리</h1>
       <p class="mt-8 text-14 text-gray-500">
-        검색 · 커스터마이즈 · 다운로드. 없으면 외부 AI로 만들어 등록하세요.
+        필요한 아이콘은 찾아 다운로드하고, 없는 건 만들어 사내에 공유해보세요.
       </p>
     </section>
 
@@ -37,11 +37,9 @@
 </template>
 
 <script setup lang="ts">
-import type { SearchMode } from '~/stores/search';
-
 const route = useRoute();
 const router = useRouter();
-const search = useSearch();
+const search = useIconStore();
 
 function readQ(query: typeof route.query): string {
   return typeof query.q === 'string' ? query.q : '';

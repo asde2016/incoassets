@@ -17,5 +17,5 @@ export default defineEventHandler(event => {
       data: { error: { code: 'NOT_FOUND', message: 'icon not found or already active' } },
     });
   }
-  return { ok: true };
+  return { ok: true, message: '복구를 완료했습니다.' };
 });

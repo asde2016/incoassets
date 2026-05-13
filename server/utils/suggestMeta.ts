@@ -8,6 +8,10 @@ const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS) || 30_000;
 export type SuggestMetaInput = {
   keyword: string;
   description?: string;
+  // 라이브러리에 이미 등록된 카테고리·태그 — soft hint 로 LLM 컨텍스트에 포함.
+  // 강제 매칭 아님: 적합한 게 있으면 재사용, 없으면 새로 만들도록.
+  existingCategories?: string[];
+  existingTags?: string[];
 };
 
 export type Bilingual = { ko: string; en: string };
@@ -126,25 +130,45 @@ const SYSTEM_PROMPT = `You are an icon metadata generator. Given a keyword and a
 
 {
   "name":     { "ko": "<Korean human-readable name, 1-3 words, ≤ 32 chars>",
-                "en": "<lowercase kebab-case English name, 1-3 words, ≤ 32 chars, hyphens only — this becomes the download filename slug, keep it concise>" },
+                "en": "<lowercase kebab-case English name, 1-3 words, ≤ 32 chars, hyphens only — this becomes the download filename slug>" },
   "category": { "ko": "<Korean noun, 1-2 words>",
                 "en": "<English noun, lowercase, ≤ 30 chars>" },
   "tags":     { "ko": ["<3-5 Korean tags>"],
                 "en": ["<3-5 English lowercase tags>"] }
 }
 
-Examples:
-- keyword "신용카드 결제" → name { ko:"신용카드 결제", en:"credit-card-payment" }, category { ko:"결제", en:"payment" }
-- keyword "데이터베이스"  → name { ko:"데이터베이스", en:"database" }, category { ko:"데이터", en:"data" }
-- keyword "클라우드"      → name { ko:"클라우드", en:"cloud" }, category { ko:"인프라", en:"infrastructure" }
+Naming guideline — when a well-known canonical or domain-standard term exists, prefer it over a literal translation:
+- "유전자 가위"   → name { ko:"유전자 가위",  en:"crispr" }            (CRISPR is the canonical term)
+- "인공지능"      → name { ko:"인공지능",     en:"ai" }
+- "사물인터넷"    → name { ko:"사물인터넷",   en:"iot" }
+- "머신러닝"      → name { ko:"머신러닝",     en:"machine-learning" }
+- "신용카드 결제" → name { ko:"신용카드 결제", en:"credit-card-payment" }
+- "데이터베이스"  → name { ko:"데이터베이스", en:"database" }
+- "클라우드"      → name { ko:"클라우드",     en:"cloud" }, category { ko:"인프라", en:"infrastructure" }
+
+If no canonical term exists, fall back to a direct translation. The "ko" name should stay close to the user's keyword unless a more recognizable Korean term exists.
 
 Output ONLY the JSON object — no prose, no code fences.`;
 
 function buildOllamaPrompt(input: SuggestMetaInput): string {
   const keyword = input.keyword.trim();
   const description = (input.description ?? '').trim();
-  return `${SYSTEM_PROMPT}
+  const cats = (input.existingCategories ?? []).filter(s => s.length > 0);
+  const tagHints = (input.existingTags ?? []).filter(s => s.length > 0);
 
+  // 기존 메타가 있으면 soft hint 로 추가 — LLM 이 일관성을 위해 재사용하도록.
+  // 강제 아님: 새 키워드가 기존 어느 것에도 맞지 않으면 새로 만들어도 됨.
+  let hintBlock = '';
+  if (cats.length > 0 || tagHints.length > 0) {
+    const lines: string[] = [];
+    lines.push('Library context — prefer reusing these existing terms when they fit; otherwise create new ones:');
+    if (cats.length > 0) lines.push(`- existing categories: ${cats.join(', ')}`);
+    if (tagHints.length > 0) lines.push(`- existing tags: ${tagHints.join(', ')}`);
+    hintBlock = `\n${lines.join('\n')}\n`;
+  }
+
+  return `${SYSTEM_PROMPT}
+${hintBlock}
 Keyword: ${keyword}
 Description: ${description || '(none)'}
 

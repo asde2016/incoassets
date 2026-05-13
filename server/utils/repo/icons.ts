@@ -152,3 +152,42 @@ export function restoreIcon(id: number): boolean {
     .run(id);
   return info.changes > 0;
 }
+
+// 현재 라이브러리에 등록된 distinct 카테고리·태그를 모은다. suggestMeta 의 soft hint 로 사용.
+// 강제 매칭 아님 — LLM 이 적합하면 재사용, 부적합하면 새로 만들도록 컨텍스트만 제공.
+export function listExistingMeta(): { categories: string[]; tags: string[] } {
+  const db = getDb();
+  const catRows = db
+    .prepare(
+      "SELECT DISTINCT category FROM icons WHERE deleted_at IS NULL AND category != '' ORDER BY category"
+    )
+    .all() as { category: string }[];
+  const categories = catRows.map(r => r.category);
+
+  const tagRows = db
+    .prepare(
+      "SELECT tags_json FROM icons WHERE deleted_at IS NULL AND tags_json != '[]'"
+    )
+    .all() as { tags_json: string }[];
+  const tagCounts = new Map<string, number>();
+  tagRows.forEach(row => {
+    try {
+      const arr = JSON.parse(row.tags_json) as unknown;
+      if (!Array.isArray(arr)) return;
+      arr.forEach(t => {
+        if (typeof t === 'string' && t.length > 0) {
+          tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+        }
+      });
+    } catch {
+      /* malformed row — skip */
+    }
+  });
+  // 빈도 내림차순으로 정렬 후 상위 30 개만 — 프롬프트가 비대해지지 않도록 cap.
+  const tags = [...tagCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 30)
+    .map(([t]) => t);
+
+  return { categories, tags };
+}

@@ -1,7 +1,3 @@
-<script setup lang="ts">
-const emit = defineEmits<{ open: [] }>();
-</script>
-
 <template>
   <button
     type="button"
@@ -11,3 +7,7 @@ const emit = defineEmits<{ open: [] }>();
     <i class="material-icons text-40">add</i>
   </button>
 </template>
+
+<script setup lang="ts">
+const emit = defineEmits<{ open: [] }>();
+</script>

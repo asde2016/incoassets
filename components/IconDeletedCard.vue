@@ -1,52 +1,3 @@
-<script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useCustomize } from '~/stores/customize';
-import { useSearch, type IconDto } from '~/stores/search';
-import { applyCustomize, type CustomizeState } from '~/utils/svg/transform';
-import { downloadSvg } from '~/utils/download';
-import IconDetailDialog from '~/components/IconDetailDialog.vue';
-
-const props = defineProps<{ icon: IconDto }>();
-const c = useCustomize();
-const search = useSearch();
-
-const state = computed<CustomizeState>(() => ({
-  size: c.size,
-  strokeWidth: c.strokeWidth,
-  mode: c.mode,
-  color: c.color,
-}));
-
-const previewSvg = computed(() => applyCustomize(props.icon.svg, state.value));
-const detailOpen = ref(false);
-const restoring = ref(false);
-
-function onCopy() {
-  void navigator.clipboard?.writeText(previewSvg.value);
-}
-
-function onDownload() {
-  downloadSvg(props.icon.slug, previewSvg.value);
-}
-
-async function onRestore() {
-  if (restoring.value) return;
-  restoring.value = true;
-  try {
-    await search.restore(props.icon.id);
-  } finally {
-    restoring.value = false;
-  }
-}
-
-function onCardKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    detailOpen.value = true;
-  }
-}
-</script>
-
 <template>
   <div
     class="group relative flex aspect-square cursor-pointer flex-col items-center justify-between rounded-lg border border-gray-200 bg-white p-12 opacity-70 grayscale transition hover:-translate-y-2 hover:border-primary hover:opacity-100 hover:grayscale-0 hover:shadow-down"
@@ -95,3 +46,52 @@ function onCardKeydown(e: KeyboardEvent) {
   </div>
   <IconDetailDialog :icon="icon" :preview-svg="previewSvg" v-model:open="detailOpen" />
 </template>
+
+<script setup lang="ts">
+import { applyCustomize, type CustomizeState } from '~/utils/svg/transform';
+
+const props = defineProps<{ icon: IconResponse }>();
+const c = useCustomizeStore();
+const iconStore = useIconStore();
+
+const state = computed<CustomizeState>(() => ({
+  size: c.size,
+  strokeWidth: c.strokeWidth,
+  mode: c.mode,
+  color: c.color,
+}));
+
+const previewSvg = computed(() => applyCustomize(props.icon.svg, state.value));
+const detailOpen = ref(false);
+const restoring = ref(false);
+
+async function onCopy() {
+  try {
+    await navigator.clipboard?.writeText(previewSvg.value);
+    toast.success('SVG를 복사했습니다.');
+  } catch {
+    /* clipboard unavailable */
+  }
+}
+
+function onDownload() {
+  downloadSvg(props.icon.slug, previewSvg.value);
+}
+
+async function onRestore() {
+  if (restoring.value) return;
+  restoring.value = true;
+  try {
+    await iconStore.restore(props.icon.id);
+  } finally {
+    restoring.value = false;
+  }
+}
+
+function onCardKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    detailOpen.value = true;
+  }
+}
+</script>

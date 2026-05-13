@@ -1,66 +1,3 @@
-<script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { useCustomize } from '~/stores/customize';
-import { useSearch, type IconDto } from '~/stores/search';
-import { applyCustomize, type CustomizeState } from '~/utils/svg/transform';
-import { downloadSvg } from '~/utils/download';
-import IconDetailDialog from '~/components/IconDetailDialog.vue';
-import { AlertDialog } from '~/components/ui/dialog';
-import { Textarea } from '~/components/ui/textarea';
-import { Button } from '~/components/ui/button';
-
-const props = defineProps<{ icon: IconDto }>();
-const c = useCustomize();
-const search = useSearch();
-
-const state = computed<CustomizeState>(() => ({
-  size: c.size,
-  strokeWidth: c.strokeWidth,
-  mode: c.mode,
-  color: c.color,
-}));
-
-const previewSvg = computed(() => applyCustomize(props.icon.svg, state.value));
-
-const detailOpen = ref(false);
-const deleteOpen = ref(false);
-const reason = ref('');
-const submitting = ref(false);
-
-watch(deleteOpen, (open) => {
-  if (!open) reason.value = '';
-});
-
-function onCopy() {
-  void navigator.clipboard?.writeText(previewSvg.value);
-}
-
-function onDownload() {
-  downloadSvg(props.icon.slug, previewSvg.value);
-}
-
-function onCardKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    detailOpen.value = true;
-  }
-}
-
-async function confirmDelete() {
-  const trimmed = reason.value.trim();
-  if (!trimmed || submitting.value) return;
-  submitting.value = true;
-  try {
-    const ok = await search.softDelete(props.icon.id, trimmed);
-    if (ok) {
-      deleteOpen.value = false;
-    }
-  } finally {
-    submitting.value = false;
-  }
-}
-</script>
-
 <template>
   <div
     class="group relative flex aspect-square cursor-pointer flex-col items-center justify-between rounded-lg border border-gray-200 bg-white p-12 transition hover:-translate-y-2 hover:border-primary hover:shadow-down"
@@ -128,3 +65,63 @@ async function confirmDelete() {
   </div>
   <IconDetailDialog :icon="icon" :preview-svg="previewSvg" v-model:open="detailOpen" />
 </template>
+
+<script setup lang="ts">
+import { applyCustomize, type CustomizeState } from '~/utils/svg/transform';
+
+const props = defineProps<{ icon: IconResponse }>();
+const c = useCustomizeStore();
+const iconStore = useIconStore();
+
+const state = computed<CustomizeState>(() => ({
+  size: c.size,
+  strokeWidth: c.strokeWidth,
+  mode: c.mode,
+  color: c.color,
+}));
+
+const previewSvg = computed(() => applyCustomize(props.icon.svg, state.value));
+
+const detailOpen = ref(false);
+const deleteOpen = ref(false);
+const reason = ref('');
+const submitting = ref(false);
+
+watch(deleteOpen, open => {
+  if (!open) reason.value = '';
+});
+
+async function onCopy() {
+  try {
+    await navigator.clipboard?.writeText(previewSvg.value);
+    toast.success('SVG를 복사했습니다.');
+  } catch {
+    /* clipboard unavailable */
+  }
+}
+
+function onDownload() {
+  downloadSvg(props.icon.slug, previewSvg.value);
+}
+
+function onCardKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    detailOpen.value = true;
+  }
+}
+
+async function confirmDelete() {
+  const trimmed = reason.value.trim();
+  if (!trimmed || submitting.value) return;
+  submitting.value = true;
+  try {
+    const ok = await iconStore.softDelete(props.icon.id, trimmed);
+    if (ok) {
+      deleteOpen.value = false;
+    }
+  } finally {
+    submitting.value = false;
+  }
+}
+</script>

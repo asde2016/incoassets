@@ -1,52 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '~/components/ui/dialog';
-import { Badge } from '~/components/ui/badge';
-import type { IconDto } from '~/stores/search';
-import { downloadSvg } from '~/utils/download';
-
-const props = defineProps<{ open: boolean; icon: IconDto; previewSvg: string }>();
-const emit = defineEmits<{ (e: 'update:open', v: boolean): void }>();
-
-function formatDate(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
-const createdAt = computed(() => formatDate(props.icon.createdAt));
-const deletedAt = computed(() =>
-  props.icon.deletedAt ? formatDate(props.icon.deletedAt) : ''
-);
-
-// 저장된 tags 는 KO + EN 합쳐 단일 배열이라 표시 시 분리.
-// 한 글자라도 non-ASCII (코드 > 127) 가 있으면 KO 로 본다 — 한글·일본어 등 CJK 안전 포착.
-function hasNonAscii(s: string): boolean {
-  return [...s].some((c) => c.charCodeAt(0) > 127);
-}
-const tagsKo = computed(() => (props.icon.tags ?? []).filter(hasNonAscii));
-const tagsEn = computed(() => (props.icon.tags ?? []).filter((t) => !hasNonAscii(t)));
-
-async function onCopy() {
-  try {
-    await navigator.clipboard?.writeText(props.previewSvg);
-  } catch {
-    /* clipboard unavailable */
-  }
-}
-
-function onDownload() {
-  downloadSvg(props.icon.slug, props.previewSvg);
-}
-</script>
-
 <template>
   <Dialog :open="open" @update:open="(v) => emit('update:open', v)">
     <DialogContent>
@@ -134,3 +85,39 @@ function onDownload() {
     </DialogContent>
   </Dialog>
 </template>
+
+<script setup lang="ts">
+const props = defineProps<{ open: boolean; icon: IconResponse; previewSvg: string }>();
+const emit = defineEmits<{ (e: 'update:open', v: boolean): void }>();
+
+function formatDate(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+const createdAt = computed(() => formatDate(props.icon.createdAt));
+const deletedAt = computed(() => (props.icon.deletedAt ? formatDate(props.icon.deletedAt) : ''));
+
+// 저장된 tags 는 KO + EN 합쳐 단일 배열이라 표시 시 분리.
+// 한 글자라도 non-ASCII (코드 > 127) 가 있으면 KO 로 본다 — 한글·일본어 등 CJK 안전 포착.
+function hasNonAscii(s: string): boolean {
+  return [...s].some(c => c.charCodeAt(0) > 127);
+}
+const tagsKo = computed(() => (props.icon.tags ?? []).filter(hasNonAscii));
+const tagsEn = computed(() => (props.icon.tags ?? []).filter(t => !hasNonAscii(t)));
+
+async function onCopy() {
+  try {
+    await navigator.clipboard?.writeText(props.previewSvg);
+    toast.success('SVG를 복사했습니다.');
+  } catch {
+    /* clipboard unavailable */
+  }
+}
+
+function onDownload() {
+  downloadSvg(props.icon.slug, props.previewSvg);
+}
+</script>

@@ -1,9 +1,3 @@
-<script setup lang="ts">
-import { useCustomize } from '~/stores/customize';
-
-const c = useCustomize();
-</script>
-
 <template>
   <aside class="sticky top-24 self-start">
     <Card>
@@ -92,3 +86,7 @@ const c = useCustomize();
     </Card>
   </aside>
 </template>
+
+<script setup lang="ts">
+const c = useCustomizeStore();
+</script>

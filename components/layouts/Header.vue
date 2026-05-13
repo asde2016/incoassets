@@ -25,9 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { useSearch } from '~/stores/search';
-
-const search = useSearch();
+const search = useIconStore();
 
 function toggleTrash() {
   search.setMode(search.mode === 'deleted' ? 'active' : 'deleted');

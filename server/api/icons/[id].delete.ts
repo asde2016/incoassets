@@ -28,5 +28,5 @@ export default defineEventHandler(async event => {
       data: { error: { code: 'NOT_FOUND', message: 'icon not found' } },
     });
   }
-  return { ok: true };
+  return { ok: true, message: '삭제를 완료했습니다.' };
 });
