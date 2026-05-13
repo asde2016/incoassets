@@ -2,13 +2,6 @@ import { pngToSvg } from '~/server/utils/pngToSvg';
 
 const MAX_PAYLOAD = 10 * 1024 * 1024;
 
-function parseBgHex(raw: string | undefined): '#FFFFFF' | '#000000' | undefined {
-  if (!raw) return undefined;
-  const v = raw.trim().toUpperCase();
-  if (v === '#FFFFFF' || v === '#000000') return v;
-  return undefined;
-}
-
 export default defineEventHandler(async (event) => {
   const parts = await readMultipartFormData(event);
   if (!parts || parts.length === 0) {
@@ -17,7 +10,7 @@ export default defineEventHandler(async (event) => {
 
   const file = parts.find((p) => p.name === 'file' && p.data && p.data.length > 0);
   const baseHexPart = parts.find((p) => p.name === 'baseHex');
-  const bgHexPart = parts.find((p) => p.name === 'backgroundHex');
+  const strokeHexPart = parts.find((p) => p.name === 'strokeHex');
   if (!file) {
     throw createError({ statusCode: 400, statusMessage: '"file" field required' });
   }
@@ -28,13 +21,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 415, statusMessage: 'PNG only' });
   }
   const baseHex = baseHexPart?.data ? baseHexPart.data.toString('utf-8') : '#256BFA';
-  const backgroundHex = parseBgHex(
-    bgHexPart?.data ? bgHexPart.data.toString('utf-8') : undefined
-  );
+  const strokeHexRaw = strokeHexPart?.data
+    ? strokeHexPart.data.toString('utf-8').trim()
+    : '';
+  const strokeHex = strokeHexRaw.length > 0 ? strokeHexRaw : undefined;
 
   let svg: string;
   try {
-    svg = await pngToSvg(file.data, { baseHex, backgroundHex });
+    svg = await pngToSvg(file.data, { baseHex, strokeHex });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'pngToSvg failed';
     throw createError({ statusCode: 422, statusMessage: message });

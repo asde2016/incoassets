@@ -26,8 +26,20 @@ const deletedAt = computed(() =>
   props.icon.deletedAt ? formatDate(props.icon.deletedAt) : ''
 );
 
-function onCopy() {
-  void navigator.clipboard?.writeText(props.previewSvg);
+// 저장된 tags 는 KO + EN 합쳐 단일 배열이라 표시 시 분리.
+// 한 글자라도 non-ASCII (코드 > 127) 가 있으면 KO 로 본다 — 한글·일본어 등 CJK 안전 포착.
+function hasNonAscii(s: string): boolean {
+  return [...s].some((c) => c.charCodeAt(0) > 127);
+}
+const tagsKo = computed(() => (props.icon.tags ?? []).filter(hasNonAscii));
+const tagsEn = computed(() => (props.icon.tags ?? []).filter((t) => !hasNonAscii(t)));
+
+async function onCopy() {
+  try {
+    await navigator.clipboard?.writeText(props.previewSvg);
+  } catch {
+    /* clipboard unavailable */
+  }
 }
 
 function onDownload() {
@@ -81,15 +93,26 @@ function onDownload() {
           <dt class="text-gray-500">Description</dt>
           <dd class="whitespace-pre-wrap text-gray-700">{{ icon.description || '-' }}</dd>
 
-          <dt class="text-gray-500">Tags</dt>
+          <dt class="text-gray-500">Tags (KO)</dt>
           <dd class="flex flex-wrap gap-4">
             <Badge
               :key="tag"
-              v-for="tag in icon.tags"
+              v-for="tag in tagsKo"
               variant="outline-primary">
               {{ tag }}
             </Badge>
-            <span v-if="!icon.tags?.length" class="text-gray-400">-</span>
+            <span v-if="!tagsKo.length" class="text-gray-400">-</span>
+          </dd>
+
+          <dt class="text-gray-500">Tags (EN)</dt>
+          <dd class="flex flex-wrap gap-4">
+            <Badge
+              :key="tag"
+              v-for="tag in tagsEn"
+              variant="outline-primary">
+              {{ tag }}
+            </Badge>
+            <span v-if="!tagsEn.length" class="text-gray-400">-</span>
           </dd>
 
           <dt class="text-gray-500">Created</dt>

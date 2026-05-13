@@ -43,11 +43,22 @@ export function validateMeta(input: MetaInput): MetaResult {
 
 const NANO = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 6);
 
-export function makeSlug(name: string): string {
-  const slug = name
+// slug 은 다운로드 파일명(${slug}.svg)으로 사용되므로 길이를 절제.
+// 32 자 안에서 가능한 한 하이픈 경계로 끊어 단어 중간이 잘리지 않게 한다.
+export const MAX_SLUG_LEN = 32;
+
+export function makeSlug(name: string, maxLen: number = MAX_SLUG_LEN): string {
+  let slug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+  if (slug.length > maxLen) {
+    const cut = slug.slice(0, maxLen);
+    const lastHyphen = cut.lastIndexOf('-');
+    slug = lastHyphen >= Math.floor(maxLen / 2)
+      ? cut.slice(0, lastHyphen)
+      : cut.replace(/-+$/g, '');
+  }
   if (slug.length === 0) return `icon-${NANO()}`;
   return slug;
 }

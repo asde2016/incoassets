@@ -6,7 +6,8 @@ export type ColorMode = 'duotone' | 'linear';
 
 const DEFAULTS = {
   size: 96,
-  strokeWidth: 6,
+  // SVG 의 baseline (PNG 측정 두께) 위에 더해지는 추가 두께. 1~8 범위.
+  strokeWidth: 1,
   mode: 'duotone' as ColorMode,
   color: '#57A3FF',
 };

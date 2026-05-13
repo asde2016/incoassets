@@ -42,8 +42,8 @@ const c = useCustomize();
           <input
             id="cz-stroke"
             type="range"
-            min="4"
-            max="20"
+            min="1"
+            max="8"
             step="1"
             class="range-feather"
             v-model.number="c.strokeWidth" />
