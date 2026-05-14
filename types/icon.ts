@@ -114,9 +114,6 @@ export const BuildPromptRequestSchema = z
   .object({
     keyword: z.string().min(1, '키워드가 필요합니다.'),
     description: z.string().optional(),
-    name: BilingualSchema.optional(),
-    category: BilingualSchema.optional(),
-    tags: BilingualTagsSchema.optional(),
   })
   .strict();
 export type BuildPromptRequest = z.infer<typeof BuildPromptRequestSchema>;

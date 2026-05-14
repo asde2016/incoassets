@@ -15,11 +15,11 @@
       <CardContent class="space-y-20">
         <div>
           <div class="mb-8 flex items-center justify-between">
-            <label for="cz-size" class="text-13 text-gray-700">Size</label>
+            <label for="czSize" class="text-13 text-gray-700">Size</label>
             <span class="text-12 text-gray-500">{{ c.size }}px</span>
           </div>
           <input
-            id="cz-size"
+            id="czSize"
             type="range"
             min="32"
             max="128"
@@ -30,11 +30,11 @@
 
         <div>
           <div class="mb-8 flex items-center justify-between">
-            <label for="cz-stroke" class="text-13 text-gray-700">Stroke width</label>
+            <label for="czStroke" class="text-13 text-gray-700">Stroke width</label>
             <span class="text-12 text-gray-500">{{ c.strokeWidth }}px</span>
           </div>
           <input
-            id="cz-stroke"
+            id="czStroke"
             type="range"
             min="1"
             max="8"

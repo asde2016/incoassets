@@ -148,6 +148,8 @@ Naming guideline — when a well-known canonical or domain-standard term exists,
 
 If no canonical term exists, fall back to a direct translation. The "ko" name should stay close to the user's keyword unless a more recognizable Korean term exists.
 
+Ambiguity guideline — for polysemous keywords (Korean homonyms or terms with multiple senses, e.g. "도메인" = field / DNS / business domain), prefer the most general / literal everyday meaning over a niche technical domain. Only pick a narrow specialized category when the keyword unambiguously points there.
+
 Output ONLY the JSON object — no prose, no code fences.`;
 
 function buildOllamaPrompt(input: SuggestMetaInput): string {
@@ -161,7 +163,7 @@ function buildOllamaPrompt(input: SuggestMetaInput): string {
   let hintBlock = '';
   if (cats.length > 0 || tagHints.length > 0) {
     const lines: string[] = [];
-    lines.push('Library context — prefer reusing these existing terms when they fit; otherwise create new ones:');
+    lines.push('Library context — these terms already exist in the library. Use them ONLY when they clearly fit the keyword; otherwise create fresh categories/tags appropriate for this keyword (do not force-fit just because a term is in the list):');
     if (cats.length > 0) lines.push(`- existing categories: ${cats.join(', ')}`);
     if (tagHints.length > 0) lines.push(`- existing tags: ${tagHints.join(', ')}`);
     hintBlock = `\n${lines.join('\n')}\n`;

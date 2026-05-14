@@ -92,11 +92,11 @@ watch(deleteOpen, open => {
 });
 
 async function onCopy() {
-  try {
-    await navigator.clipboard?.writeText(previewSvg.value);
+  const ok = await copyToClipboard(previewSvg.value);
+  if (ok) {
     toast.success('SVG를 복사했습니다.');
-  } catch {
-    /* clipboard unavailable */
+  } else {
+    toast.error('복사에 실패했습니다.');
   }
 }
 

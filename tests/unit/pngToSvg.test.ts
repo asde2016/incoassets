@@ -33,11 +33,10 @@ describe('pngToSvg', () => {
 
     expect(svg.startsWith('<svg')).toBe(true);
     expect(svg.endsWith('</svg>')).toBe(true);
-    expect(svg).toContain('viewBox="0 0 512 512"');
+    expect(svg).toContain('viewBox="0 0 1024 1024"');
     expect(svg).toContain('fill-rule="evenodd"');
 
-    // baseline 메타
-    expect(svg).toMatch(/data-baseline-stroke-512="[\d.]+"/);
+    // baseline 메타 (viewBox 단위)
     expect(svg).toMatch(/data-baseline-stroke-vb="[\d.]+"/);
 
     // fill 레이어 - 출력 baseHex 그대로

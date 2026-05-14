@@ -1,7 +1,7 @@
 // 저장된 SVG (pngToSvg 출력) 에 customize state 를 적용.
 // 새 SVG 스키마:
-//   <svg viewBox="0 0 512 512" fill-rule="evenodd"
-//        data-baseline-stroke-512="..." data-baseline-stroke-vb="...">
+//   <svg viewBox="0 0 1024 1024" fill-rule="evenodd"
+//        data-baseline-stroke-vb="...">
 //     <g class="icon-fill" fill="${baseHex}">...</g>
 //     <g class="icon-stroke" fill="${strokeHex}" stroke="${strokeHex}"
 //        stroke-width="0" stroke-linecap="round" stroke-linejoin="round">...</g>

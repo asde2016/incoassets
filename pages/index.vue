@@ -62,7 +62,7 @@ watch(inputQ, next => {
   if (debounce) clearTimeout(debounce);
   debounce = setTimeout(() => {
     search.setQuery(next);
-  }, 300);
+  }, 500);
 });
 
 watch([() => search.q, () => search.mode], ([q, mode]) => {

@@ -9,7 +9,7 @@ Style
 - Two-tone aesthetic with strong contrast: black outline + blue fill
 
 Output
-- 512×512 px PNG
+- 1024×1024 px PNG
 - Background: solid pure #FFFFFF, completely flat — no gradient, shadow, texture, or checkered pattern
 - The #FFFFFF background will be programmatically removed in post-processing. Do NOT render transparency, alpha edges, or soft fades — paint solid #FFFFFF wherever the icon is absent
 - Use only two distinct colors throughout the icon
@@ -29,9 +29,9 @@ Composition
 Line strokes
 - Color: #000000 (pure black)
 - Used for: (a) the entire icon outline, AND (b) the outline of every filled region without exception
-- Thin uniform width — approximately 6px on the 512×512 canvas (about 1.2% of canvas width)
-- Consistent thin width across the entire icon — do NOT draw bold or thick strokes. The classic icon library look is preserved through fill composition, not through stroke thickness
-- Critical: source stroke thickness will be re-rendered in post-processing; keep it deliberately thin and crisp
+- Stroke width: 8-12px on the 1024×1024 canvas (HARD CAP: never thicker than 16px)
+- Reference style: thin uniform strokes like Lucide / Heroicons / Tabler outline icon sets — never bold
+- Critical: source stroke thickness will be re-rendered in post-processing (server thins strokes to a fixed target); keep it deliberately thin and crisp
 - Rounded line caps and joins
 - Smooth curves on organic forms, precise straight edges on geometric forms
 
@@ -45,54 +45,21 @@ Fills
 {context}
 ` as const;
 
-export type Bilingual = { ko: string; en: string };
-export type BilingualTags = { ko: string[]; en: string[] };
+// Bilingual / BilingualTags 는 types/icon.ts 의 Zod 기반 canonical 정의를
+// Nuxt auto-import 로 그대로 사용한다. 여기서는 재선언하지 않음.
 
 export type PromptInput = {
   keyword: string;
   description?: string;
-  name?: Bilingual;
-  category?: Bilingual;
-  tags?: BilingualTags;
 };
-
-function pairLabel(ko: string, en: string): string {
-  if (ko && en) return `${ko} (${en})`;
-  return ko || en;
-}
-
-function cleanList(arr: string[] | undefined): string[] {
-  return (arr ?? [])
-    .map((t) => (typeof t === 'string' ? t.trim() : ''))
-    .filter((t) => t.length > 0);
-}
-
-function buildContext(input: PromptInput): string {
-  const nameKo = input.name?.ko?.trim() ?? '';
-  const nameEn = input.name?.en?.trim() ?? '';
-  const catKo = input.category?.ko?.trim() ?? '';
-  const catEn = input.category?.en?.trim() ?? '';
-  const tagsKo = cleanList(input.tags?.ko);
-  const tagsEn = cleanList(input.tags?.en);
-
-  const conceptLines: string[] = [];
-  if (nameKo || nameEn) conceptLines.push(`- name: ${pairLabel(nameKo, nameEn)}`);
-  if (catKo || catEn) conceptLines.push(`- category: ${pairLabel(catKo, catEn)}`);
-  // tags 는 ko + en 합쳐 단일 줄 — LLM 이 한쪽 어휘만 알고 있어도 매칭되도록 풍부하게.
-  if (tagsKo.length > 0 || tagsEn.length > 0) {
-    conceptLines.push(`- tags: ${[...tagsKo, ...tagsEn].join(', ')}`);
-  }
-
-  const concept = conceptLines.length > 0 ? `Concept\n${conceptLines.join('\n')}` : '';
-  const description = input.description?.trim() ?? '';
-
-  return [concept, description].filter((s) => s.length > 0).join('\n\n');
-}
 
 export function buildPrompt(input: PromptInput): string {
   const safeKeyword =
     input.keyword.trim().length > 0 ? input.keyword.trim() : '(키워드를 입력하세요)';
-  const context = buildContext(input);
+  // keyword 가 프롬프트 도입부에 first-class 로 박히고, description 만 추가 컨텍스트로 사용.
+  // name/category/tags 는 더 이상 프롬프트에 주입하지 않음 — Concept 블록이 abstract 키워드
+  // ("API" → 통신/개발/인터페이스 ...) 에서 산만한 신호를 만들어 결과 품질을 떨어뜨렸음.
+  const context = input.description?.trim() ?? '';
   return PROMPT_GUIDE_TEMPLATE
     .replace('{keyword}', safeKeyword)
     .replace('{context}', context);

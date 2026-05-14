@@ -31,7 +31,7 @@
           <StepperItem :step="3" :disabled="!promptText">
             <StepperTrigger>
               <StepperIndicator>3</StepperIndicator>
-              <StepperTitle>PNG 업로드</StepperTitle>
+              <StepperTitle>이미지 업로드</StepperTitle>
               <StepperDescription>SVG 로 변환</StepperDescription>
             </StepperTrigger>
             <StepperSeparator />
@@ -48,20 +48,20 @@
         <!-- Step 1: 입력 -->
         <section v-if="currentStep === 1" class="flex flex-col gap-12">
           <div>
-            <Label for="um-keyword">
+            <Label for="umKeyword">
               키워드 <span class="text-danger">*</span>
             </Label>
             <Input
-              id="um-keyword"
+              id="umKeyword"
               size="sm"
               placeholder="예: 결제, 클라우드"
               v-model="localKeyword" />
           </div>
 
           <div>
-            <Label for="um-description">설명</Label>
+            <Label for="umDescription">설명</Label>
             <Textarea
-              id="um-description"
+              id="umDescription"
               rows="4"
               class="px-14 text-14"
               maxlength="500"
@@ -81,13 +81,13 @@
             class="font-mono text-11"
             :model-value="promptText" />
           <p class="text-12 text-gray-500">
-            아래 프롬프트 복사를 누르고 GPT / Gemini 등에 붙여넣어 이미지를 생성해주세요.
+            아래 프롬프트 복사를 누르고 Claude / GPT / Gemini 등에 붙여넣어 이미지를 생성해주세요.
           </p>
         </section>
 
         <!-- Step 3: PNG 업로드 -->
         <section v-else-if="currentStep === 3" class="flex flex-col gap-8">
-          <Label>결과 PNG</Label>
+          <Label>결과 이미지</Label>
           <label
             class="relative flex cursor-pointer flex-col items-center justify-center gap-6 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 px-24 py-40 text-center transition hover:border-primary hover:bg-primary/5"
             :class="{ '!border-primary !bg-primary/10': isDragging }"
@@ -95,7 +95,7 @@
             @dragleave.prevent="isDragging = false"
             @drop.prevent="onDropFile">
             <input
-              id="um-png"
+              id="umPng"
               type="file"
               accept="image/png"
               class="sr-only"
@@ -120,22 +120,39 @@
             <div class="aspect-square w-full" v-html="convertedSvg" />
           </div>
           <div class="flex flex-col gap-10">
+            <div class="flex items-center justify-between">
+              <span class="text-12 text-gray-500">AI 추천 메타</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="w-32 h-32 rounded-full p-0"
+                :title="suggestLoading ? '추천 중…' : '다시 추천'"
+                :disabled="suggestLoading || !localKeyword.trim()"
+                @click="onRegenerateMeta">
+                <i
+                  class="material-icons text-16"
+                  :class="{ 'animate-spin': suggestLoading }">
+                  refresh
+                </i>
+              </Button>
+            </div>
             <div class="grid grid-cols-2 gap-8">
               <div>
-                <Label for="um-name-ko">
+                <Label for="umNameKo">
                   이름 (KO) <span class="text-danger">*</span>
                 </Label>
                 <Input
-                  id="um-name-ko"
+                  id="umNameKo"
                   size="sm"
                   maxlength="32"
                   placeholder="신용카드 결제"
                   v-model="nameKo" />
               </div>
               <div>
-                <Label for="um-name-en">이름 (EN) <span class="text-danger">*</span></Label>
+                <Label for="umNameEn">이름 (EN) <span class="text-danger">*</span></Label>
                 <Input
-                  id="um-name-en"
+                  id="umNameEn"
                   size="sm"
                   maxlength="32"
                   placeholder="credit-card-payment"
@@ -144,39 +161,29 @@
             </div>
             <div class="grid grid-cols-2 gap-8">
               <div>
-                <Label for="um-cat-ko">카테고리 (KO) <span class="text-danger">*</span></Label>
+                <Label for="umCatKo">카테고리 (KO) <span class="text-danger">*</span></Label>
                 <Input
-                  id="um-cat-ko"
+                  id="umCatKo"
                   size="sm"
                   placeholder="결제"
                   v-model="categoryKo" />
               </div>
               <div>
-                <Label for="um-cat-en">카테고리 (EN) <span class="text-danger">*</span></Label>
+                <Label for="umCatEn">카테고리 (EN) <span class="text-danger">*</span></Label>
                 <Input
-                  id="um-cat-en"
+                  id="umCatEn"
                   size="sm"
                   placeholder="payment"
                   v-model="categoryEn" />
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-8">
-              <div>
-                <Label for="um-tags-ko">태그 (KO) <span class="text-danger">*</span></Label>
-                <Input
-                  id="um-tags-ko"
-                  size="sm"
-                  placeholder="결제, 신용카드"
-                  v-model="tagsKoText" />
-              </div>
-              <div>
-                <Label for="um-tags-en">태그 (EN) <span class="text-danger">*</span></Label>
-                <Input
-                  id="um-tags-en"
-                  size="sm"
-                  placeholder="payment, credit-card"
-                  v-model="tagsEnText" />
-              </div>
+            <div>
+              <Label for="umTags">태그 <span class="text-danger">*</span></Label>
+              <Input
+                id="umTags"
+                size="sm"
+                placeholder="결제, 신용카드, payment, credit-card"
+                v-model="tagsText" />
             </div>
             <p v-if="saveError" class="text-12 text-danger">{{ saveError }}</p>
           </div>
@@ -217,7 +224,7 @@
             variant="primary"
             :disabled="!canSave"
             @click="onSave">
-            {{ saveLoading ? '등록 중…' : '등록' }}
+            {{ saveLoading ? '등록 중…' : suggestLoading ? '정보 생성 중…' : '등록' }}
           </Button>
         </DialogFooter>
       </template>
@@ -248,11 +255,11 @@ const nameKo = ref('');
 const nameEn = ref('');
 const categoryKo = ref('');
 const categoryEn = ref('');
-const tagsKoText = ref('');
-const tagsEnText = ref('');
+const tagsText = ref('');
 const detailDescription = ref('');
 const saveLoading = ref(false);
 const saveError = ref('');
+const suggestLoading = ref(false);
 
 // Wizard 의 활성 step. action 성공 시 자동 증가하지만 StepperTrigger 로
 // 이전 step 으로 자유 이동 가능 (이미 거친 step 한정).
@@ -263,14 +270,13 @@ const canBuild = computed(
 );
 const canConvert = computed(() => !!pngFile.value && !convertLoading.value);
 const canSave = computed(() => {
-  if (!convertedSvg.value || saveLoading.value) return false;
+  if (!convertedSvg.value || saveLoading.value || suggestLoading.value) return false;
   return (
     nameKo.value.trim().length > 0 &&
     nameEn.value.trim().length > 0 &&
     categoryKo.value.trim().length > 0 &&
     categoryEn.value.trim().length > 0 &&
-    tagsKoText.value.trim().length > 0 &&
-    tagsEnText.value.trim().length > 0
+    tagsText.value.trim().length > 0
   );
 });
 
@@ -294,11 +300,11 @@ watch(
       nameEn.value = '';
       categoryKo.value = '';
       categoryEn.value = '';
-      tagsKoText.value = '';
-      tagsEnText.value = '';
+      tagsText.value = '';
       detailDescription.value = '';
       saveLoading.value = false;
       saveError.value = '';
+      suggestLoading.value = false;
     }
   }
 );
@@ -307,48 +313,51 @@ function parseList(s: string): string[] {
   return s.split(/[,#\n]+/).map(t => t.trim()).filter(t => t.length > 0);
 }
 
+// 한글이 한 글자라도 포함되면 KO, 그 외(영문/숫자/하이픈 등)는 EN 으로 분류.
+function splitTagsByLang(s: string): { ko: string[]; en: string[] } {
+  const tokens = parseList(s);
+  const ko: string[] = [];
+  const en: string[] = [];
+  for (const t of tokens) {
+    if (/[가-힣]/.test(t)) ko.push(t);
+    else en.push(t);
+  }
+  return { ko, en };
+}
+
 async function onBuildPrompt() {
   buildLoading.value = true;
   buildError.value = '';
   promptText.value = '';
 
-  // 1) Ollama 메타 추론 — 미실행/실패 시 store 가 null 로 fallback. 사용자가 이미 채운 필드는 보존.
   const kw = localKeyword.value.trim();
-  const suggested: SuggestMetaResponse = (await iconStore.suggestMeta({
-    keyword: kw,
-    description: description.value,
-  })) ?? { name: { ko: '', en: '' }, category: { ko: '', en: '' }, tags: { ko: [], en: [] } };
 
-  if (!nameKo.value && suggested.name.ko) nameKo.value = suggested.name.ko;
-  if (!nameEn.value && suggested.name.en) nameEn.value = suggested.name.en;
-  if (!categoryKo.value && suggested.category.ko) categoryKo.value = suggested.category.ko;
-  if (!categoryEn.value && suggested.category.en) categoryEn.value = suggested.category.en;
-  if (!tagsKoText.value && suggested.tags.ko.length > 0) {
-    tagsKoText.value = suggested.tags.ko.join(', ');
-  }
-  if (!tagsEnText.value && suggested.tags.en.length > 0) {
-    tagsEnText.value = suggested.tags.en.join(', ');
-  }
+  // 1) suggestMeta 는 fire-and-forget — Ollama 호출(3~30초)이지만 step 4 등록 폼에만
+  //    필요하므로 백그라운드로 보냄. 사용자는 step 2(프롬프트 복사) 로 즉시 이동.
+  //    미실행/실패 시 store 가 null 반환 → 폼은 빈 상태로 유지되어 사용자가 직접 입력.
+  suggestLoading.value = true;
+  iconStore
+    .suggestMeta({ keyword: kw, description: description.value })
+    .then((suggested) => {
+      if (!suggested) return;
+      if (!nameKo.value && suggested.name.ko) nameKo.value = suggested.name.ko;
+      if (!nameEn.value && suggested.name.en) nameEn.value = suggested.name.en;
+      if (!categoryKo.value && suggested.category.ko) categoryKo.value = suggested.category.ko;
+      if (!categoryEn.value && suggested.category.en) categoryEn.value = suggested.category.en;
+      if (!tagsText.value) {
+        const merged = [...suggested.tags.ko, ...suggested.tags.en];
+        if (merged.length > 0) tagsText.value = merged.join(', ');
+      }
+    })
+    .finally(() => {
+      suggestLoading.value = false;
+    });
 
-  // 2) 메타를 함께 넘겨 이미지 프롬프트에 Concept 블록으로 포함.
-  const bodyTags: BilingualTags = {
-    ko: tagsKoText.value ? parseList(tagsKoText.value) : suggested.tags.ko,
-    en: tagsEnText.value ? parseList(tagsEnText.value) : suggested.tags.en,
-  };
-
+  // 2) buildPrompt 는 사실상 문자열 치환 — Ollama 와 무관하게 즉시 응답.
   try {
     const res = await iconStore.buildPrompt({
       keyword: kw,
       description: description.value,
-      name: {
-        ko: nameKo.value || suggested.name.ko,
-        en: nameEn.value || suggested.name.en,
-      },
-      category: {
-        ko: categoryKo.value || suggested.category.ko,
-        en: categoryEn.value || suggested.category.en,
-      },
-      tags: bodyTags,
     });
     if (res) {
       promptText.value = res.prompt;
@@ -361,14 +370,37 @@ async function onBuildPrompt() {
   }
 }
 
+// 사용자가 step 4 에서 "다시 추천" 클릭 시 — suggestMeta 재호출 후 모든 메타 필드 덮어씀.
+// onBuildPrompt 의 fire-and-forget 자동 채움과 달리, 명시적 액션이라 빈 필드 조건 없이 전체 갱신.
+async function onRegenerateMeta() {
+  const kw = localKeyword.value.trim();
+  if (!kw) return;
+  suggestLoading.value = true;
+  try {
+    const suggested = await iconStore.suggestMeta({
+      keyword: kw,
+      description: description.value,
+    });
+    if (!suggested) return;
+    nameKo.value = suggested.name.ko;
+    nameEn.value = suggested.name.en;
+    categoryKo.value = suggested.category.ko;
+    categoryEn.value = suggested.category.en;
+    const merged = [...suggested.tags.ko, ...suggested.tags.en];
+    tagsText.value = merged.join(', ');
+  } finally {
+    suggestLoading.value = false;
+  }
+}
+
 async function onCopyPrompt() {
   if (!promptText.value) return;
-  try {
-    await navigator.clipboard.writeText(promptText.value);
+  const ok = await copyToClipboard(promptText.value);
+  if (ok) {
     toast.success('프롬프트를 복사했습니다.');
     currentStep.value = 3;
-  } catch {
-    /* clipboard unavailable */
+  } else {
+    toast.error('복사에 실패했습니다. 다시 시도해주세요.');
   }
 }
 
@@ -424,7 +456,7 @@ async function onSave() {
     const row = await iconStore.createIcon({
       name: { ko: nameKo.value.trim(), en: nameEn.value.trim() },
       category: { ko: categoryKo.value.trim(), en: categoryEn.value.trim() },
-      tags: { ko: parseList(tagsKoText.value), en: parseList(tagsEnText.value) },
+      tags: splitTagsByLang(tagsText.value),
       description: detailDescription.value.trim(),
       svg: convertedSvg.value,
     });

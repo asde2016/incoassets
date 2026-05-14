@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { applyCustomize, type CustomizeState } from '~/utils/svg/transform';
 
 const SAMPLE =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill-rule="evenodd" ' +
-  'data-baseline-stroke-512="6.50" data-baseline-stroke-vb="6.50">' +
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill-rule="evenodd" ' +
+  'data-baseline-stroke-vb="6.50">' +
   '<g class="icon-fill" fill="#2E5BFF"><path d="M0 0L10 10Z"/></g>' +
   '<g class="icon-stroke" fill="#000000" stroke="#000000" stroke-width="0" ' +
   'stroke-linecap="round" stroke-linejoin="round"><path d="M5 5L15 15Z"/></g>' +

@@ -9,7 +9,7 @@ const THEME_COLOR = '#31bc8d';
 const COMPATIBILITY_DATE = '2025-05-15';
 const DEV_PORT = 3000;
 
-const IS_SEO_ENABLED = true;
+const IS_SEO_ENABLED = false;
 
 export default defineNuxtConfig({
   compatibilityDate: COMPATIBILITY_DATE,
@@ -154,7 +154,9 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      // title: APP_TITLE,
+      title: APP_TITLE,
+      // 모든 페이지의 title 을 APP_TITLE 로 고정 — @nuxtjs/seo 의 깨진 기본 템플릿(%siteName 미치환) 우회
+      titleTemplate: APP_TITLE,
       meta: [
         { name: 'theme-color', content: THEME_COLOR },
         // SEO 마스터 스위치에 따른 로봇 제어

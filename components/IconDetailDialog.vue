@@ -109,11 +109,11 @@ const tagsKo = computed(() => (props.icon.tags ?? []).filter(hasNonAscii));
 const tagsEn = computed(() => (props.icon.tags ?? []).filter(t => !hasNonAscii(t)));
 
 async function onCopy() {
-  try {
-    await navigator.clipboard?.writeText(props.previewSvg);
+  const ok = await copyToClipboard(props.previewSvg);
+  if (ok) {
     toast.success('SVG를 복사했습니다.');
-  } catch {
-    /* clipboard unavailable */
+  } else {
+    toast.error('복사에 실패했습니다.');
   }
 }
 

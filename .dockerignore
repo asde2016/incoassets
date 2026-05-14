@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Node / build outputs
+node_modules
+.nuxt
+.output
+dist
+coverage
+
+# Env (런타임에 주입)
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+*.swp
+*.log
+
+# 데이터/문서/테스트는 이미지에 포함하지 않음
+data
+docs
+reference
+tests
+
+# Docker 자체
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+nginx

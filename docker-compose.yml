@@ -1,0 +1,73 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Nuxt config가 빌드 시점에 process.env를 읽으므로 build-arg로 전달
+        API_BASE_URL: ${API_BASE_URL}
+        CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY}
+    image: incoassets-app:latest
+    container_name: incoassets-app
+    init: true # tini 대체: PID 1 시그널 전파 보장
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Nitro 서버 바인딩 (EXPOSE 3000 과 일치)
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: '3000'
+      # SQLite 파일 경로 (volume 마운트 지점과 일치)
+      DB_PATH: /app/data/icons.db
+      # Nuxt runtimeConfig 런타임 오버라이드
+      NUXT_API_BASE_URL: ${API_BASE_URL}
+      NUXT_PUBLIC_APP_URL: ${API_BASE_URL}
+      NUXT_PUBLIC_SERVER_URL: ${API_BASE_URL}
+      NUXT_PUBLIC_CRYPTO_KEY: ${CRYPTO_SECRET_KEY}
+      # Ollama (AI 메타 제안)
+      # OLLAMA_URL 은 컨테이너 안에서 호스트를 가리키는 host.docker.internal 로 강제.
+      # (.env 는 로컬 pnpm dev 용 127.0.0.1 을 갖고 있어 그대로 쓰면 컨테이너에서 자기 자신을
+      # 가리키게 되므로 명시적으로 덮어씀)
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
+      OLLAMA_TIMEOUT_MS: ${OLLAMA_TIMEOUT_MS:-30000}
+    # Linux 에서 host.docker.internal 호스트네임을 컨테이너 안에서 해석 가능하게 함
+    # (Docker Desktop on Mac/Windows 는 자동, Linux 는 명시 필요)
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    volumes:
+      # SQLite 파일 영속화 — 컨테이너 재배포 시에도 유지
+      - ./data:/app/data
+    expose:
+      - '3000'
+    networks:
+      - incoassets
+    healthcheck:
+      test: ['CMD-SHELL', 'node -e "require(\"http\").get(\"http://localhost:3000/\", r => process.exit(r.statusCode < 500 ? 0 : 1)).on(\"error\", () => process.exit(1))"']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: incoassets-nginx
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    ports:
+      - '80:80'
+      # HTTPS 사용 시 활성화
+      # - '443:443'
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # HTTPS 사용 시 인증서 마운트
+      # - ./nginx/certs:/etc/nginx/certs:ro
+      # - ./nginx/logs:/var/log/nginx
+    networks:
+      - incoassets
+
+networks:
+  incoassets:
+    driver: bridge
